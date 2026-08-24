@@ -1,0 +1,11 @@
+{
+  "name": "keanu-reeves-fan-community",
+  "private": true,
+  "scripts": {
+    "seed": "node database/seed/seed.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.2",
+    "mongoose": "^9.9.3"
+  }
+}
