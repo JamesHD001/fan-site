@@ -28,11 +28,16 @@ const giftTransactionSchema = new mongoose.Schema(
       index: true,
     },
 
-    // Snapshot of the gift price at purchase time (USD)
+    // Snapshot of the total gift price at purchase time, in minor units.
+    // Example: 5000 USD = $50.00.
     amount: {
       type: Number,
       required: true,
       min: 0,
+      validate: {
+        validator: Number.isInteger,
+        message: "Amount must be stored as an integer minor-unit amount.",
+      },
     },
 
     quantity: {
