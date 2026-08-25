@@ -12,7 +12,6 @@ const {
 const {
   expireMembershipIfNecessary,
 } = require("../services/membershipService");
-const { toSubunit } = require("../utils/currency");
 const { convertUsdToNgn } = require("../services/paymentService");
 const { notifyMembershipActivated } = require("../services/notificationService");
 
@@ -36,10 +35,7 @@ const getMyMembership = async (req, res) => {
       });
     }
 
-    membership =
-      await expireMembershipIfNecessary(
-        membership
-      );
+    membership = await expireMembershipIfNecessary(membership);
 
     if (membership.status !== "ACTIVE") {
       return res.status(404).json({
@@ -54,10 +50,7 @@ const getMyMembership = async (req, res) => {
       membership,
     });
   } catch (error) {
-    console.error(
-      "Get membership error:",
-      error
-    );
+    console.error("Get membership error:", error);
 
     return res.status(500).json({
       success: false,
@@ -90,9 +83,6 @@ const verifyMembershipPayment = async (req, res) => {
       });
     }
 
-    // Idempotency:
-    // If this payment was already successfully processed,
-    // don't process it again.
     if (payment.status === "SUCCESS") {
       const membership = await Membership.findById(
         payment.membership
@@ -107,10 +97,8 @@ const verifyMembershipPayment = async (req, res) => {
     }
 
     const paystackResponse = await verifyTransaction(reference);
-
     const transaction = paystackResponse.data;
 
-    // Verify the reference returned by Paystack.
     if (transaction.reference !== payment.reference) {
       return res.status(400).json({
         success: false,
@@ -118,13 +106,8 @@ const verifyMembershipPayment = async (req, res) => {
       });
     }
 
-    // Convert our stored amount into Paystack's expected subunit.
-    const expectedAmount = toSubunit(
-      payment.amount,
-      payment.currency
-    );
-
-    if (Number(transaction.amount) !== expectedAmount) {
+    // Paystack already returns the transaction amount in minor units.
+    if (Number(transaction.amount) !== payment.amount) {
       return res.status(400).json({
         success: false,
         message: "Payment amount mismatch.",
@@ -143,12 +126,9 @@ const verifyMembershipPayment = async (req, res) => {
 
     if (transaction.status !== "success") {
       payment.status =
-        transaction.status === "abandoned"
-          ? "ABANDONED"
-          : "FAILED";
+        transaction.status === "abandoned" ? "ABANDONED" : "FAILED";
 
       payment.providerResponse = transaction;
-
       await payment.save();
 
       return res.status(400).json({
@@ -169,20 +149,13 @@ const verifyMembershipPayment = async (req, res) => {
       });
     }
 
-    // Prevent accidental activation if the membership
-    // was already processed.
     if (membership.status === "ACTIVE") {
       payment.status = "SUCCESS";
-
       payment.paidAt = transaction.paid_at
         ? new Date(transaction.paid_at)
         : new Date();
-
-      payment.providerTransactionId =
-        String(transaction.id);
-
+      payment.providerTransactionId = String(transaction.id);
       payment.providerResponse = transaction;
-
       await payment.save();
 
       return res.status(200).json({
@@ -194,32 +167,23 @@ const verifyMembershipPayment = async (req, res) => {
     }
 
     const startDate = new Date();
-
-    const expiryDate = calculateExpiryDate(
-      startDate,
-      membership.plan
-    );
+    const expiryDate = calculateExpiryDate(startDate, membership.plan);
 
     membership.status = "ACTIVE";
     membership.startedAt = startDate;
     membership.expiresAt = expiryDate;
 
     if (!membership.membershipNumber) {
-      membership.membershipNumber =
-        generateMembershipNumber();
+      membership.membershipNumber = generateMembershipNumber();
     }
 
     await membership.save();
 
     payment.status = "SUCCESS";
-
     payment.paidAt = transaction.paid_at
       ? new Date(transaction.paid_at)
       : new Date();
-
-    payment.providerTransactionId =
-      String(transaction.id);
-
+    payment.providerTransactionId = String(transaction.id);
     payment.providerResponse = transaction;
 
     await payment.save();
@@ -231,13 +195,11 @@ const verifyMembershipPayment = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message:
-        "Payment verified and membership activated successfully.",
+      message: "Payment verified and membership activated successfully.",
       payment,
       membership: {
         id: membership._id,
-        membershipNumber:
-          membership.membershipNumber,
+        membershipNumber: membership.membershipNumber,
         status: membership.status,
         startedAt: membership.startedAt,
         expiresAt: membership.expiresAt,
@@ -245,15 +207,11 @@ const verifyMembershipPayment = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error(
-      "Verify membership payment error:",
-      error
-    );
+    console.error("Verify membership payment error:", error);
 
     return res.status(500).json({
       success: false,
-      message:
-        "Unable to verify membership payment.",
+      message: "Unable to verify membership payment.",
     });
   }
 };
@@ -272,15 +230,11 @@ const getMembershipPlans = async (req, res) => {
       plans,
     });
   } catch (error) {
-    console.error(
-      "Get membership plans error:",
-      error
-    );
+    console.error("Get membership plans error:", error);
 
     return res.status(500).json({
       success: false,
-      message:
-        "Unable to retrieve membership plans.",
+      message: "Unable to retrieve membership plans.",
     });
   }
 };
@@ -294,28 +248,21 @@ const getPaymentHistory = async (req, res) => {
         path: "membership",
         populate: {
           path: "plan",
-          select:
-            "name slug price currency duration durationUnit",
+          select: "name slug price currency duration durationUnit",
         },
       })
-      .sort({
-        createdAt: -1,
-      });
+      .sort({ createdAt: -1 });
 
     return res.status(200).json({
       success: true,
       payments,
     });
   } catch (error) {
-    console.error(
-      "Get payment history error:",
-      error
-    );
+    console.error("Get payment history error:", error);
 
     return res.status(500).json({
       success: false,
-      message:
-        "Unable to retrieve payment history.",
+      message: "Unable to retrieve payment history.",
     });
   }
 };
@@ -327,10 +274,7 @@ const getMembershipCard = async (req, res) => {
     })
       .sort({ createdAt: -1 })
       .populate("plan")
-      .populate(
-        "user",
-        "name username email profileImage"
-      );
+      .populate("user", "name username email profileImage");
 
     if (!membership) {
       return res.status(404).json({
@@ -339,8 +283,7 @@ const getMembershipCard = async (req, res) => {
       });
     }
 
-    membership =
-      await expireMembershipIfNecessary(membership);
+    membership = await expireMembershipIfNecessary(membership);
 
     if (membership.status !== "ACTIVE") {
       return res.status(403).json({
@@ -355,41 +298,22 @@ const getMembershipCard = async (req, res) => {
       card: {
         memberName: membership.user.name,
         username: membership.user.username,
-        profileImage:
-          membership.user.profileImage,
-
-        membershipNumber:
-          membership.membershipNumber,
-
-        membershipType:
-          membership.plan.name,
-
-        badge:
-          membership.plan.badge,
-
-        cardDesign:
-          membership.plan.cardDesign,
-
-        startedAt:
-          membership.startedAt,
-
-        expiresAt:
-          membership.expiresAt,
-
-        status:
-          membership.status,
+        profileImage: membership.user.profileImage,
+        membershipNumber: membership.membershipNumber,
+        membershipType: membership.plan.name,
+        badge: membership.plan.badge,
+        cardDesign: membership.plan.cardDesign,
+        startedAt: membership.startedAt,
+        expiresAt: membership.expiresAt,
+        status: membership.status,
       },
     });
   } catch (error) {
-    console.error(
-      "Get membership card error:",
-      error
-    );
+    console.error("Get membership card error:", error);
 
     return res.status(500).json({
       success: false,
-      message:
-        "Unable to retrieve membership card.",
+      message: "Unable to retrieve membership card.",
     });
   }
 };
@@ -420,22 +344,19 @@ const initializeMembershipPayment = async (req, res) => {
     const existingMembership = await Membership.findOne({
       user: req.user._id,
       status: "ACTIVE",
-      expiresAt: {
-        $gt: new Date(),
-      },
+      expiresAt: { $gt: new Date() },
     });
 
     if (existingMembership) {
       return res.status(409).json({
         success: false,
-        message:
-          "You already have an active membership.",
+        message: "You already have an active membership.",
       });
     }
 
-    // Convert USD price to NGN for Paystack checkout
-    const { ngnAmount, exchangeRate } =
-      await convertUsdToNgn(plan.price);
+    const { ngnAmountMinor, exchangeRate } = await convertUsdToNgn(
+      plan.price
+    );
 
     const reference = `MEM-${Date.now()}-${crypto
       .randomBytes(4)
@@ -455,7 +376,7 @@ const initializeMembershipPayment = async (req, res) => {
       reference,
       originalAmount: plan.price,
       originalCurrency: plan.currency,
-      amount: ngnAmount,
+      amount: ngnAmountMinor,
       currency: "NGN",
       exchangeRate,
       provider: "PAYSTACK",
@@ -463,35 +384,29 @@ const initializeMembershipPayment = async (req, res) => {
     });
 
     try {
-      const paystackResponse =
-        await initializeTransaction({
-          email: req.user.email,
-          amount: toSubunit(
-            ngnAmount,
-            "NGN"
-          ),
-          currency: "NGN",
-          reference,
-          metadata: JSON.stringify({
-            paymentId: payment._id.toString(),
-            membershipId: membership._id.toString(),
-            userId: req.user._id.toString(),
-            planId: plan._id.toString(),
-          }),
-          callbackUrl:
-            `${process.env.CLIENT_URL}/payment/callback`,
-        });
+      const paystackResponse = await initializeTransaction({
+        email: req.user.email,
+        amount: ngnAmountMinor,
+        currency: "NGN",
+        reference,
+        metadata: JSON.stringify({
+          paymentId: payment._id.toString(),
+          membershipId: membership._id.toString(),
+          userId: req.user._id.toString(),
+          planId: plan._id.toString(),
+        }),
+        callbackUrl: `${process.env.CLIENT_URL}/payment/callback`,
+      });
 
       return res.status(201).json({
         success: true,
-        message:
-          "Membership payment initialized successfully.",
+        message: "Membership payment initialized successfully.",
         payment: {
           id: payment._id,
           reference,
           originalAmount: plan.price,
           originalCurrency: plan.currency,
-          amount: ngnAmount,
+          amount: ngnAmountMinor,
           currency: "NGN",
           exchangeRate,
           status: payment.status,
@@ -502,42 +417,29 @@ const initializeMembershipPayment = async (req, res) => {
           status: membership.status,
         },
         checkout: {
-          authorizationUrl:
-            paystackResponse.data.authorization_url,
-          accessCode:
-            paystackResponse.data.access_code,
-          reference:
-            paystackResponse.data.reference,
+          authorizationUrl: paystackResponse.data.authorization_url,
+          accessCode: paystackResponse.data.access_code,
+          reference: paystackResponse.data.reference,
         },
       });
     } catch (paystackError) {
-      await Payment.findByIdAndUpdate(
-        payment._id,
-        {
-          status: "FAILED",
-        }
-      );
+      await Payment.findByIdAndUpdate(payment._id, {
+        status: "FAILED",
+      });
 
-      await Membership.findByIdAndUpdate(
-        membership._id,
-        {
-          status: "CANCELLED",
-        }
-      );
+      await Membership.findByIdAndUpdate(membership._id, {
+        status: "CANCELLED",
+      });
 
       throw paystackError;
     }
   } catch (error) {
-    console.error(
-      "Initialize membership payment error:",
-      error
-    );
+    console.error("Initialize membership payment error:", error);
 
     return res.status(500).json({
       success: false,
       message:
-        error.message ||
-        "Unable to initialize membership payment.",
+        error.message || "Unable to initialize membership payment.",
     });
   }
 };
