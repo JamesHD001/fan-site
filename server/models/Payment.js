@@ -33,11 +33,16 @@ const paymentSchema = new mongoose.Schema(
       index: true,
     },
 
-    // Original product price
+    // All monetary amounts are stored in currency minor units.
+    // Example: 3500 USD = $35.00; 5250000 NGN = ₦52,500.00.
     originalAmount: {
       type: Number,
       required: true,
       min: 0,
+      validate: {
+        validator: Number.isInteger,
+        message: "Original amount must be an integer minor-unit amount.",
+      },
     },
 
     originalCurrency: {
@@ -47,11 +52,15 @@ const paymentSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // Actual amount sent to the payment provider
+    // Actual amount sent to the payment provider, in minor units.
     amount: {
       type: Number,
       required: true,
       min: 0,
+      validate: {
+        validator: Number.isInteger,
+        message: "Amount must be an integer minor-unit amount.",
+      },
     },
 
     currency: {
@@ -61,7 +70,8 @@ const paymentSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // USD → NGN rate used for this transaction
+    // USD → NGN rate used for this transaction.
+    // This remains a major-unit exchange rate, e.g. 1500 NGN per 1 USD.
     exchangeRate: {
       type: Number,
       required: true,
@@ -107,7 +117,4 @@ const paymentSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model(
-  "Payment",
-  paymentSchema
-);
+module.exports = mongoose.model("Payment", paymentSchema);
