@@ -10,6 +10,9 @@ const Celebrity = require("../../server/models/Celebrity");
 const MembershipPlan = require("../../server/models/MembershipPlan");
 const MeetingType = require("../../server/models/MeetingType");
 const Gift = require("../../server/models/Gift");
+const User = require("../../server/models/User");
+
+const { hashPassword } = require("../../server/utils/password");
 
 const celebrityData = require("./data/celebrity");
 const membershipData = require("./data/memberships");
@@ -49,6 +52,44 @@ const seedDatabase = async () => {
     console.log(
       `Created ${giftData.length} gifts.`
     );
+
+    /*
+     * Seed the admin account.
+     * Credentials come from .env with safe defaults.
+     */
+    const adminEmail = (
+      process.env.ADMIN_EMAIL || "admin@fancommunity.com"
+    ).toLowerCase();
+
+    const adminUsername =
+      process.env.ADMIN_USERNAME || "admin";
+
+    const existingAdmin = await User.findOne({
+      email: adminEmail,
+    });
+
+    if (existingAdmin) {
+      console.log(
+        `Admin user already exists: ${adminEmail}`
+      );
+    } else {
+      const hashedPassword = await hashPassword(
+        process.env.ADMIN_PASSWORD || "ChangeMe123!"
+      );
+
+      await User.create({
+        name: "Platform Admin",
+        username: adminUsername,
+        email: adminEmail,
+        password: hashedPassword,
+        role: "ADMIN",
+        isVerified: true,
+      });
+
+      console.log(
+        `Created admin user: ${adminEmail}`
+      );
+    }
 
     console.log("\nDatabase seeding completed successfully.");
   } catch (error) {

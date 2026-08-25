@@ -1,0 +1,613 @@
+Celebrity Fan Community Platform — Complete Project Structure
+celebrity-fan-site/
+│
+├── frontend/
+│   ├── public/
+│   │   ├── images/
+│   │   │   ├── celebrity/
+│   │   │   ├── avatars/
+│   │   │   ├── posts/
+│   │   │   ├── events/
+│   │   │   ├── gifts/
+│   │   │   └── membership/
+│   │   │
+│   │   ├── favicon.ico
+│   │   └── ...
+│   │
+│   ├── src/
+│   │   ├── assets/
+│   │   │   ├── images/
+│   │   │   ├── icons/
+│   │   │   └── ...
+│   │   │
+│   │   ├── components/
+│   │   │   ├── common/
+│   │   │   │   ├── Navbar.jsx
+│   │   │   │   ├── Footer.jsx
+│   │   │   │   ├── Loader.jsx
+│   │   │   │   ├── Modal.jsx
+│   │   │   │   ├── Button.jsx
+│   │   │   │   ├── Input.jsx
+│   │   │   │   └── ...
+│   │   │   │
+│   │   │   ├── auth/
+│   │   │   │   ├── LoginForm.jsx
+│   │   │   │   ├── RegisterForm.jsx
+│   │   │   │   ├── ForgotPassword.jsx
+│   │   │   │   └── ResetPassword.jsx
+│   │   │   │
+│   │   │   ├── community/
+│   │   │   │   ├── PostCard.jsx
+│   │   │   │   ├── CommentSection.jsx
+│   │   │   │   ├── CommentItem.jsx
+│   │   │   │   ├── LikeButton.jsx
+│   │   │   │   └── ...
+│   │   │   │
+│   │   │   ├── membership/
+│   │   │   │   ├── MembershipCard.jsx
+│   │   │   │   ├── MembershipPlans.jsx
+│   │   │   │   ├── MembershipStatus.jsx
+│   │   │   │   └── MembershipBadge.jsx
+│   │   │   │
+│   │   │   ├── meetings/
+│   │   │   │   ├── MeetingCard.jsx
+│   │   │   │   ├── BookingForm.jsx
+│   │   │   │   └── BookingStatus.jsx
+│   │   │   │
+│   │   │   ├── gifts/
+│   │   │   │   ├── GiftCard.jsx
+│   │   │   │   ├── GiftForm.jsx
+│   │   │   │   └── GiftHistory.jsx
+│   │   │   │
+│   │   │   ├── events/
+│   │   │   │   ├── EventCard.jsx
+│   │   │   │   ├── EventDetails.jsx
+│   │   │   │   └── EventRegistration.jsx
+│   │   │   │
+│   │   │   ├── notifications/
+│   │   │   │   ├── NotificationItem.jsx
+│   │   │   │   └── NotificationList.jsx
+│   │   │   │
+│   │   │   └── admin/
+│   │   │       ├── AdminSidebar.jsx
+│   │   │       ├── AdminHeader.jsx
+│   │   │       ├── StatsCard.jsx
+│   │   │       ├── UserTable.jsx
+│   │   │       ├── PaymentTable.jsx
+│   │   │       └── ...
+│   │   │
+│   │   ├── pages/
+│   │   │   ├── Home.jsx
+│   │   │   ├── About.jsx
+│   │   │   ├── Celebrity.jsx
+│   │   │   ├── Community.jsx
+│   │   │   ├── Posts.jsx
+│   │   │   ├── PostDetails.jsx
+│   │   │   │
+│   │   │   ├── auth/
+│   │   │   │   ├── Login.jsx
+│   │   │   │   ├── Register.jsx
+│   │   │   │   ├── ForgotPassword.jsx
+│   │   │   │   └── ResetPassword.jsx
+│   │   │   │
+│   │   │   ├── membership/
+│   │   │   │   ├── Membership.jsx
+│   │   │   │   ├── MembershipPlans.jsx
+│   │   │   │   ├── MembershipDetails.jsx
+│   │   │   │   └── MembershipCard.jsx
+│   │   │   │
+│   │   │   ├── meetings/
+│   │   │   │   ├── Meetings.jsx
+│   │   │   │   ├── BookMeeting.jsx
+│   │   │   │   └── BookingHistory.jsx
+│   │   │   │
+│   │   │   ├── gifts/
+│   │   │   │   ├── Gifts.jsx
+│   │   │   │   ├── SendGift.jsx
+│   │   │   │   └── GiftHistory.jsx
+│   │   │   │
+│   │   │   ├── events/
+│   │   │   │   ├── Events.jsx
+│   │   │   │   ├── EventDetails.jsx
+│   │   │   │   └── MyEvents.jsx
+│   │   │   │
+│   │   │   ├── notifications/
+│   │   │   │   └── Notifications.jsx
+│   │   │   │
+│   │   │   ├── profile/
+│   │   │   │   ├── Profile.jsx
+│   │   │   │   ├── EditProfile.jsx
+│   │   │   │   └── Settings.jsx
+│   │   │   │
+│   │   │   └── admin/
+│   │   │       ├── Dashboard.jsx
+│   │   │       ├── Users.jsx
+│   │   │       ├── Celebrities.jsx
+│   │   │       ├── Posts.jsx
+│   │   │       ├── Memberships.jsx
+│   │   │       ├── Meetings.jsx
+│   │   │       ├── Bookings.jsx
+│   │   │       ├── Gifts.jsx
+│   │   │       ├── Events.jsx
+│   │   │       ├── Payments.jsx
+│   │   │       ├── Notifications.jsx
+│   │   │       └── Analytics.jsx
+│   │   │
+│   │   ├── layouts/
+│   │   │   ├── MainLayout.jsx
+│   │   │   ├── AuthLayout.jsx
+│   │   │   └── AdminLayout.jsx
+│   │   │
+│   │   ├── routes/
+│   │   │   ├── AppRoutes.jsx
+│   │   │   ├── ProtectedRoute.jsx
+│   │   │   └── AdminRoute.jsx
+│   │   │
+│   │   ├── context/
+│   │   │   ├── AuthContext.jsx
+│   │   │   ├── UserContext.jsx
+│   │   │   └── NotificationContext.jsx
+│   │   │
+│   │   ├── services/
+│   │   │   ├── api.js
+│   │   │   ├── authService.js
+│   │   │   ├── membershipService.js
+│   │   │   ├── paymentService.js
+│   │   │   ├── meetingService.js
+│   │   │   ├── giftService.js
+│   │   │   ├── eventService.js
+│   │   │   └── notificationService.js
+│   │   │
+│   │   ├── hooks/
+│   │   │   ├── useAuth.js
+│   │   │   ├── useApi.js
+│   │   │   └── ...
+│   │   │
+│   │   ├── utils/
+│   │   │   ├── formatCurrency.js
+│   │   │   ├── formatDate.js
+│   │   │   └── ...
+│   │   │
+│   │   ├── App.jsx
+│   │   ├── main.jsx
+│   │   └── index.css
+│   │
+│   ├── .env
+│   ├── .env.example
+│   ├── package.json
+│   ├── vite.config.js
+│   └── README.md
+│
+│
+├── server/
+│   │
+│   ├── config/
+│   │   ├── db.js
+│   │   ├── env.js
+│   │   ├── paystack.js
+│   │   └── ...
+│   │
+│   ├── controllers/
+│   │   ├── authController.js
+│   │   ├── userController.js
+│   │   ├── celebrityController.js
+│   │   ├── postController.js
+│   │   ├── commentController.js
+│   │   ├── likeController.js
+│   │   ├── membershipPlanController.js
+│   │   ├── membershipController.js
+│   │   ├── membershipCardController.js
+│   │   ├── meetingController.js
+│   │   ├── bookingController.js
+│   │   ├── giftController.js
+│   │   ├── giftTransactionController.js
+│   │   ├── eventController.js
+│   │   ├── paymentController.js
+│   │   ├── notificationController.js
+│   │   └── adminController.js
+│   │
+│   ├── middleware/
+│   │   ├── authMiddleware.js
+│   │   ├── adminMiddleware.js
+│   │   ├── errorMiddleware.js
+│   │   ├── validateMiddleware.js
+│   │   ├── rateLimitMiddleware.js
+│   │   └── uploadMiddleware.js
+│   │
+│   ├── models/
+│   │   ├── User.js
+│   │   ├── Celebrity.js
+│   │   ├── Post.js
+│   │   ├── Comment.js
+│   │   ├── Like.js
+│   │   ├── MembershipPlan.js
+│   │   ├── Membership.js
+│   │   ├── MembershipCard.js
+│   │   ├── MeetingType.js
+│   │   ├── Booking.js
+│   │   ├── Gift.js
+│   │   ├── GiftTransaction.js
+│   │   ├── Event.js
+│   │   ├── Payment.js
+│   │   └── Notification.js
+│   │
+│   ├── routes/
+│   │   ├── authRoutes.js
+│   │   ├── userRoutes.js
+│   │   ├── celebrityRoutes.js
+│   │   ├── postRoutes.js
+│   │   ├── commentRoutes.js
+│   │   ├── likeRoutes.js
+│   │   ├── membershipPlanRoutes.js
+│   │   ├── membershipRoutes.js
+│   │   ├── membershipCardRoutes.js
+│   │   ├── meetingRoutes.js
+│   │   ├── bookingRoutes.js
+│   │   ├── giftRoutes.js
+│   │   ├── giftTransactionRoutes.js
+│   │   ├── eventRoutes.js
+│   │   ├── paymentRoutes.js
+│   │   ├── notificationRoutes.js
+│   │   └── adminRoutes.js
+│   │
+│   ├── services/
+│   │   ├── paystackService.js
+│   │   ├── exchangeRateService.js
+│   │   ├── membershipService.js
+│   │   ├── paymentService.js
+│   │   ├── notificationService.js
+│   │   └── ...
+│   │
+│   ├── utils/
+│   │   ├── currency.js
+│   │   ├── membership.js
+│   │   ├── generateToken.js
+│   │   ├── validators.js
+│   │   ├── response.js
+│   │   └── ...
+│   │
+│   ├── webhooks/
+│   │   └── paystackWebhook.js
+│   │
+│   ├── app.js
+│   ├── server.js
+│   ├── package.json
+│   ├── .env
+│   ├── .env.example
+│   └── README.md
+│
+│
+├── database/
+│   ├── seed/
+│   │   ├── seedUsers.js
+│   │   ├── seedCelebrity.js
+│   │   ├── seedMembershipPlans.js
+│   │   ├── seedMeetingTypes.js
+│   │   ├── seedGifts.js
+│   │   └── seedEvents.js
+│   │
+│   └── scripts/
+│       ├── createIndexes.js
+│       ├── resetDatabase.js
+│       └── ...
+│
+│
+├── docs/
+│   ├── architecture/
+│   │   ├── system-architecture.md
+│   │   ├── backend-architecture.md
+│   │   └── frontend-architecture.md
+│   │
+│   ├── api/
+│   │   ├── authentication.md
+│   │   ├── users.md
+│   │   ├── community.md
+│   │   ├── memberships.md
+│   │   ├── meetings.md
+│   │   ├── bookings.md
+│   │   ├── gifts.md
+│   │   ├── events.md
+│   │   ├── payments.md
+│   │   └── notifications.md
+│   │
+│   ├── database/
+│   │   ├── schema.md
+│   │   ├── relationships.md
+│   │   └── indexes.md
+│   │
+│   └── project-requirements/
+│       ├── requirements.md
+│       ├── features.md
+│       └── roadmap.md
+│
+│
+├── tests/
+│   ├── unit/
+│   │   ├── controllers/
+│   │   ├── services/
+│   │   ├── utils/
+│   │   └── models/
+│   │
+│   ├── integration/
+│   │   ├── auth.test.js
+│   │   ├── membership.test.js
+│   │   ├── payment.test.js
+│   │   ├── booking.test.js
+│   │   └── ...
+│   │
+│   └── fixtures/
+│       └── ...
+│
+│
+├── .gitignore
+├── package.json
+├── README.md
+└── LICENSE
+Current backend data model
+
+The backend currently revolves around these 15 core MongoDB/Mongoose models:
+
+User
+ ├── memberships
+ ├── bookings
+ ├── gifts
+ ├── payments
+ ├── notifications
+ └── posts/comments/interactions
+
+Celebrity
+ └── community content
+
+Post
+ ├── Comment
+ └── Like
+
+MembershipPlan
+ └── Membership
+      └── MembershipCard
+
+MeetingType
+ └── Booking
+
+Gift
+ └── GiftTransaction
+
+Event
+
+Payment
+
+Notification
+Models we've established
+Model	Purpose
+User	Registered platform users
+Celebrity	Celebrity/fan-community profile
+Post	Community posts
+Comment	Post comments
+Like	Post/content likes
+MembershipPlan	Available membership tiers
+Membership	User's purchased membership
+MembershipCard	Digital membership card
+MeetingType	Types of celebrity meetings
+Booking	Meeting reservations
+Gift	Available gifts
+GiftTransaction	Gift purchase/transaction record
+Event	Community events
+Payment	Central payment transaction record
+Notification	User notifications
+💳 Payment architecture
+
+This is one of the areas we've already actively implemented.
+
+The payment flow is intended to be:
+
+Frontend
+   │
+   ▼
+Backend API
+   │
+   ▼
+Payment Controller
+   │
+   ▼
+Paystack Service
+   │
+   ├── Initialize Transaction
+   │
+   ▼
+Paystack
+   │
+   ▼
+Payment
+   │
+   ▼
+Paystack Webhook
+   │
+   ▼
+Payment Verification
+   │
+   ▼
+Membership / Booking / Gift
+
+We have already worked with:
+
+services/paystackService.js
+services/exchangeRateService.js
+utils/currency.js
+controllers/paymentController.js
+models/Payment.js
+
+And the Payment model supports transaction types such as:
+
+MEMBERSHIP
+MEETING
+GIFT
+
+We also successfully tested the real-time exchange-rate API, and it returned the current exchange rate successfully.
+
+So the currency/payment architecture is not merely a mock/demo system.
+
+🔐 Security architecture
+
+The server is also structured around:
+
+Helmet
+CORS
+Morgan
+Authentication middleware
+Admin authorization
+Validation
+Rate limiting
+Environment variables
+Paystack verification
+Webhook verification
+Central error handling
+
+The application entry point we've already worked with is essentially:
+
+server/
+├── app.js
+└── server.js
+
+with the Express application loading routes such as:
+
+/auth
+/memberships
+/users
+/payments
+/...
+🧩 Feature architecture
+
+The entire platform can now be viewed as these major modules:
+
+                    CELEBRITY FAN PLATFORM
+                              │
+       ┌──────────────────────┼──────────────────────┐
+       │                      │                      │
+   AUTHENTICATION          COMMUNITY              CELEBRITY
+       │                      │                      │
+   Register                Posts                 Profile
+   Login                   Comments              Content
+   Logout                  Likes                 Information
+   Password               Interaction
+       │
+       ├──────────────┐
+       │              │
+   MEMBERSHIPS      PAYMENTS
+       │              │
+   Plans           Paystack
+   Purchase        Verification
+   Cards           Exchange Rate
+   Status          Transactions
+       │
+       ├──────────────┐
+       │              │
+   MEETINGS         GIFTS
+       │              │
+   Meeting Types    Gift Catalog
+   Bookings         Transactions
+   History          History
+       │
+       ├──────────────┐
+       │              │
+     EVENTS       NOTIFICATIONS
+       │              │
+   Registration     Alerts
+   Details          Updates
+       │
+       └──────────────┐
+                      │
+                  ADMIN PANEL
+                      │
+              ┌───────┼────────┐
+              │       │        │
+            Users  Payments Analytics
+              │       │        │
+           Content Membership Reports
+📊 Admin side
+
+The administrative side is intended to provide centralized management for:
+
+Admin Dashboard
+│
+├── Overview
+├── Users
+├── Celebrities
+├── Posts
+├── Comments
+├── Membership Plans
+├── Memberships
+├── Membership Cards
+├── Meeting Types
+├── Bookings
+├── Gifts
+├── Gift Transactions
+├── Events
+├── Payments
+├── Notifications
+└── Analytics
+
+This gives the project a proper management layer, rather than making it just a public-facing fan page.
+
+🗂️ Root-level architecture
+
+The most important distinction is:
+
+celebrity-fan-site/
+│
+├── frontend/       ← React/Vite client
+│
+├── server/         ← Node/Express REST API
+│
+├── database/       ← Seeds + database scripts
+│
+├── docs/            ← Technical/project documentation
+│
+├── tests/           ← Automated testing
+│
+├── package.json
+├── README.md
+└── .gitignore
+
+That is the structure I recommend we keep as the canonical project architecture rather than continually moving files around as new features are added.
+
+✅ Project TODO
+
+Based on the work completed so far:
+
+ Project architecture defined
+ Express backend established
+ MongoDB/Mongoose architecture established
+ Authentication architecture
+ Membership architecture
+ Membership plans
+ Membership records
+ Membership cards
+ Payment model
+ Paystack service integration
+ Transaction initialization
+ Currency/subunit utilities
+ Real-time exchange-rate API integration tested successfully
+ Core security middleware
+ Community architecture
+ Meeting/booking architecture
+ Gift architecture
+ Event architecture
+ Notification architecture
+ Admin architecture planned
+ Analytics architecture planned
+ Complete all remaining API controllers/routes
+ Complete frontend implementation
+ Connect frontend to backend APIs
+ Complete Paystack webhook handling
+ Complete booking/payment flows
+ Complete gift/payment flows
+ Complete admin dashboard
+ Complete analytics
+ Add automated tests
+ Add database seed scripts
+ Complete API documentation
+ Security audit
+ Production deployment
+ End-to-end testing
+
+Important: the tree above is the complete target architecture, while some files are still planned rather than already physically created. The payment/exchange-rate pieces are among the areas we've already actively implemented and tested.

@@ -33,6 +33,21 @@ const paymentSchema = new mongoose.Schema(
       index: true,
     },
 
+    // Original product price
+    originalAmount: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+
+    originalCurrency: {
+      type: String,
+      default: "USD",
+      uppercase: true,
+      trim: true,
+    },
+
+    // Actual amount sent to the payment provider
     amount: {
       type: Number,
       required: true,
@@ -41,9 +56,16 @@ const paymentSchema = new mongoose.Schema(
 
     currency: {
       type: String,
-      default: "USD",
+      default: "NGN",
       uppercase: true,
       trim: true,
+    },
+
+    // USD → NGN rate used for this transaction
+    exchangeRate: {
+      type: Number,
+      required: true,
+      min: 0,
     },
 
     provider: {
