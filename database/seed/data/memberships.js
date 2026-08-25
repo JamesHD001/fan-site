@@ -4,8 +4,8 @@ module.exports = [
     slug: "supporter",
     description:
       "A great way to become a recognized member of the fan community.",
-    // USD minor units: $10.00 = 1000.
-    price: 1000,
+    // USD minor units: $1,000.00 = 100000.
+    price: 100000,
     currency: "USD",
     duration: 1,
     durationUnit: "YEAR",
@@ -29,8 +29,8 @@ module.exports = [
     slug: "insider",
     description:
       "An enhanced membership for fans who want deeper access to the community experience.",
-    // USD minor units: $35.00 = 3500.
-    price: 3500,
+    // USD minor units: $3,500.00 = 350000.
+    price: 350000,
     currency: "USD",
     duration: 1,
     durationUnit: "YEAR",
@@ -55,8 +55,8 @@ module.exports = [
     slug: "vip",
     description:
       "The highest membership tier with premium community privileges and priority experiences.",
-    // USD minor units: $100.00 = 10000.
-    price: 10000,
+    // USD minor units: $10,000.00 = 1000000.
+    price: 1000000,
     currency: "USD",
     duration: 1,
     durationUnit: "YEAR",
