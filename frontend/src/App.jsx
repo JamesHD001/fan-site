@@ -53,7 +53,7 @@ function PaymentCallback() {
 
     const verifyPayment = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/membership/verify`, {
+        const response = await fetch(`${API_BASE_URL}/memberships/verify`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
