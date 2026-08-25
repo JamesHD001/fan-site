@@ -9,7 +9,6 @@ const {
   notifyBookingConfirmed,
   notifyGiftCompleted,
 } = require("../services/notificationService");
-const { toSubunit } = require("../utils/currency");
 
 const {
   calculateExpiryDate,
@@ -25,22 +24,25 @@ const verifyPaystackSignature = (req) => {
 
   const secretKey = process.env.PAYSTACK_SECRET_KEY;
 
-  if (!secretKey) {
-    console.error(
-      "PAYSTACK_SECRET_KEY is not configured."
-    );
-
+  if (!secretKey || !Buffer.isBuffer(req.body)) {
     return false;
   }
 
-  const hash = crypto
+  const expectedSignature = crypto
     .createHmac("sha512", secretKey)
     .update(req.body)
     .digest("hex");
 
+  const expectedBuffer = Buffer.from(expectedSignature, "utf8");
+  const receivedBuffer = Buffer.from(signature, "utf8");
+
+  if (expectedBuffer.length !== receivedBuffer.length) {
+    return false;
+  }
+
   return crypto.timingSafeEqual(
-    Buffer.from(hash),
-    Buffer.from(signature)
+    expectedBuffer,
+    receivedBuffer
   );
 };
 
@@ -54,15 +56,12 @@ const handlePaystackWebhook = async (req, res) => {
       return res.status(401).send("Invalid signature.");
     }
 
-    const event = JSON.parse(req.body.toString());
+    const event = JSON.parse(req.body.toString("utf8"));
 
     console.log(
       `Paystack webhook received: ${event.event}`
     );
 
-    /*
-     * We acknowledge events we don't currently need.
-     */
     if (event.event !== "charge.success") {
       return res.status(200).send("Event received.");
     }
@@ -87,37 +86,18 @@ const handlePaystackWebhook = async (req, res) => {
         `Payment not found for reference: ${transaction.reference}`
       );
 
-      /*
-       * Return 200 so Paystack doesn't repeatedly retry
-       * an event for a payment that doesn't belong to us.
-       */
       return res.status(200).send("Event received.");
     }
 
-    /*
-     * Idempotency:
-     *
-     * If this payment has already been processed,
-     * do nothing.
-     */
     if (payment.status === "SUCCESS") {
       return res.status(200).send("Payment already processed.");
     }
 
-    /*
-     * Validate amount.
-     *
-     * Payment.amount is stored in normal currency units,
-     * while Paystack's transaction.amount is in subunits.
-     */
-    const expectedAmount = toSubunit(
-      payment.amount,
-      payment.currency
-    );
-
+    // Payment.amount is stored in provider minor units.
+    // Paystack's transaction.amount is also in minor units.
     if (
       Number(transaction.amount) !==
-      Number(expectedAmount)
+      Number(payment.amount)
     ) {
       console.error(
         `Webhook amount mismatch for ${payment.reference}`
@@ -131,12 +111,10 @@ const handlePaystackWebhook = async (req, res) => {
       return res.status(400).send("Amount mismatch.");
     }
 
-    /*
-     * Validate currency.
-     */
     if (
+      !transaction.currency ||
       transaction.currency.toUpperCase() !==
-      payment.currency.toUpperCase()
+        payment.currency.toUpperCase()
     ) {
       console.error(
         `Webhook currency mismatch for ${payment.reference}`
@@ -150,9 +128,18 @@ const handlePaystackWebhook = async (req, res) => {
       return res.status(400).send("Currency mismatch.");
     }
 
-    /*
-     * Handle successful membership payment.
-     */
+    if (transaction.status !== "success") {
+      payment.status =
+        transaction.status === "abandoned"
+          ? "ABANDONED"
+          : "FAILED";
+
+      payment.providerResponse = transaction;
+      await payment.save();
+
+      return res.status(200).send("Payment was not successful.");
+    }
+
     if (
       payment.type === "MEMBERSHIP" &&
       payment.membership
@@ -176,11 +163,10 @@ const handlePaystackWebhook = async (req, res) => {
 
         membership.status = "ACTIVE";
         membership.startedAt = startDate;
-        membership.expiresAt =
-          calculateExpiryDate(
-            startDate,
-            membership.plan
-          );
+        membership.expiresAt = calculateExpiryDate(
+          startDate,
+          membership.plan
+        );
 
         if (!membership.membershipNumber) {
           membership.membershipNumber =
@@ -191,14 +177,10 @@ const handlePaystackWebhook = async (req, res) => {
       }
 
       payment.status = "SUCCESS";
-      payment.paidAt =
-        transaction.paid_at
-          ? new Date(transaction.paid_at)
-          : new Date();
-
-      payment.providerTransactionId =
-        String(transaction.id);
-
+      payment.paidAt = transaction.paid_at
+        ? new Date(transaction.paid_at)
+        : new Date();
+      payment.providerTransactionId = String(transaction.id);
       payment.providerResponse = transaction;
 
       await payment.save();
@@ -213,13 +195,8 @@ const handlePaystackWebhook = async (req, res) => {
       );
     }
 
-    /*
-     * Handle successful meeting booking payment.
-     */
     if (payment.type === "MEETING") {
-      const booking = await Booking.findById(
-        payment.booking
-      );
+      const booking = await Booking.findById(payment.booking);
 
       if (!booking) {
         console.error(
@@ -234,19 +211,14 @@ const handlePaystackWebhook = async (req, res) => {
       if (booking.status === "PENDING_PAYMENT") {
         booking.status = "CONFIRMED";
         booking.confirmedAt = new Date();
-
         await booking.save();
       }
 
       payment.status = "SUCCESS";
-      payment.paidAt =
-        transaction.paid_at
-          ? new Date(transaction.paid_at)
-          : new Date();
-
-      payment.providerTransactionId =
-        String(transaction.id);
-
+      payment.paidAt = transaction.paid_at
+        ? new Date(transaction.paid_at)
+        : new Date();
+      payment.providerTransactionId = String(transaction.id);
       payment.providerResponse = transaction;
 
       await payment.save();
@@ -262,14 +234,10 @@ const handlePaystackWebhook = async (req, res) => {
       );
     }
 
-    /*
-     * Handle successful gift payment.
-     */
     if (payment.type === "GIFT") {
-      const giftTransaction =
-        await GiftTransaction.findById(
-          payment.giftTransaction
-        );
+      const giftTransaction = await GiftTransaction.findById(
+        payment.giftTransaction
+      );
 
       if (!giftTransaction) {
         console.error(
@@ -281,32 +249,24 @@ const handlePaystackWebhook = async (req, res) => {
         );
       }
 
-      if (
-        giftTransaction.status === "PENDING_PAYMENT"
-      ) {
+      if (giftTransaction.status === "PENDING_PAYMENT") {
         giftTransaction.status = "COMPLETED";
-
         await giftTransaction.save();
       }
 
       payment.status = "SUCCESS";
-      payment.paidAt =
-        transaction.paid_at
-          ? new Date(transaction.paid_at)
-          : new Date();
-
-      payment.providerTransactionId =
-        String(transaction.id);
-
+      payment.paidAt = transaction.paid_at
+        ? new Date(transaction.paid_at)
+        : new Date();
+      payment.providerTransactionId = String(transaction.id);
       payment.providerResponse = transaction;
 
       await payment.save();
 
-      const populatedGift =
-        await giftTransaction.populate(
-          "gift",
-          "name"
-        );
+      const populatedGift = await giftTransaction.populate(
+        "gift",
+        "name"
+      );
 
       await notifyGiftCompleted(
         giftTransaction.user.toString(),
@@ -326,9 +286,7 @@ const handlePaystackWebhook = async (req, res) => {
       error
     );
 
-    return res.status(500).send(
-      "Webhook processing failed."
-    );
+    return res.status(500).send("Webhook processing failed.");
   }
 };
 
