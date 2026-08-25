@@ -27,17 +27,24 @@ const giftSchema = new mongoose.Schema(
       default: "",
     },
 
+    // Price stored in currency minor units.
+    // Example: 500 USD = $5.00.
     price: {
-        type: Number,
-        required: true,
-        min: 0,
+      type: Number,
+      required: true,
+      min: 0,
+      validate: {
+        validator: Number.isInteger,
+        message: "Price must be stored as an integer minor-unit amount.",
+      },
     },
+
     currency: {
-        type: String,
-        default: "USD",
-        uppercase: true,
-        trim: true,
-     },
+      type: String,
+      default: "USD",
+      uppercase: true,
+      trim: true,
+    },
 
     isActive: {
       type: Boolean,
