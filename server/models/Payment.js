@@ -11,11 +11,7 @@ const paymentSchema = new mongoose.Schema(
 
     type: {
       type: String,
-      enum: [
-        "MEMBERSHIP",
-        "MEETING",
-        "GIFT",
-      ],
+      enum: ["MEMBERSHIP", "MEETING", "GIFT"],
       required: true,
       index: true,
     },
@@ -23,6 +19,18 @@ const paymentSchema = new mongoose.Schema(
     membership: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Membership",
+      default: null,
+    },
+
+    booking: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Booking",
+      default: null,
+    },
+
+    giftTransaction: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "GiftTransaction",
       default: null,
     },
 
@@ -34,7 +42,6 @@ const paymentSchema = new mongoose.Schema(
     },
 
     // All monetary amounts are stored in currency minor units.
-    // Example: 3500 USD = $35.00; 5250000 NGN = ₦52,500.00.
     originalAmount: {
       type: Number,
       required: true,
@@ -70,8 +77,7 @@ const paymentSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // USD → NGN rate used for this transaction.
-    // This remains a major-unit exchange rate, e.g. 1500 NGN per 1 USD.
+    // Major-unit exchange rate, e.g. 1500 NGN per 1 USD.
     exchangeRate: {
       type: Number,
       required: true,
@@ -86,13 +92,7 @@ const paymentSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: [
-        "PENDING",
-        "SUCCESS",
-        "FAILED",
-        "ABANDONED",
-        "REFUNDED",
-      ],
+      enum: ["PENDING", "SUCCESS", "FAILED", "ABANDONED", "REFUNDED"],
       default: "PENDING",
       index: true,
     },
@@ -112,9 +112,7 @@ const paymentSchema = new mongoose.Schema(
       default: null,
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 module.exports = mongoose.model("Payment", paymentSchema);
