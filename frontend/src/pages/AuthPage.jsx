@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
@@ -14,12 +14,13 @@ export default function AuthPage({ mode = 'login' }) {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  if (isAuthenticated) {
-    navigate('/', { replace: true })
-    return null
-  }
-
   const redirectTo = location.state?.from || '/'
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(redirectTo, { replace: true })
+    }
+  }, [isAuthenticated, navigate, redirectTo])
 
   const handleChange = (event) => {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }))
@@ -55,6 +56,10 @@ export default function AuthPage({ mode = 'login' }) {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  if (isAuthenticated) {
+    return <main className="placeholder-page"><p>Redirecting…</p></main>
   }
 
   return (
@@ -101,7 +106,7 @@ export default function AuthPage({ mode = 'login' }) {
 
         <p className="auth-switch">
           {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
-          <button type="button" onClick={() => navigate(isLogin ? '/register' : '/login')}>
+          <button type="button" onClick={() => navigate(isLogin ? '/register' : '/login', { state: { from: redirectTo } })}>
             {isLogin ? 'Create one' : 'Sign in'}
           </button>
         </p>
