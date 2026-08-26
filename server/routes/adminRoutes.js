@@ -1,17 +1,1 @@
-const express = require("express");
-const { getDashboardStats, getUsers, updateUser, setUserActiveStatus, getPayments, getBookings, updateBookingStatus, getPendingPosts, moderatePost, sendAnnouncement } = require("../controllers/adminController");
-const authenticate = require("../middleware/authenticate");
-const requireAdmin = require("../middleware/adminMiddleware");
-const router = express.Router();
-router.use(authenticate, requireAdmin);
-router.get("/dashboard", getDashboardStats);
-router.get("/users", getUsers);
-router.patch("/users/:id", updateUser);
-router.patch("/users/:id/status", setUserActiveStatus);
-router.get("/payments", getPayments);
-router.get("/bookings", getBookings);
-router.patch("/bookings/:id/status", updateBookingStatus);
-router.get("/posts/pending", getPendingPosts);
-router.patch("/posts/:id/moderate", moderatePost);
-router.post("/announcements", sendAnnouncement);
-module.exports = router;
+const express=require("express");const{getDashboardStats,getUsers,updateUser,setUserActiveStatus,getPayments,getBookings,updateBookingStatus,getGiftTransactions,updateGiftStatus,getGiftsAdmin,updateGift,getPendingPosts,moderatePost,sendAnnouncement}=require("../controllers/adminController");const authenticate=require("../middleware/authenticate");const requireAdmin=require("../middleware/adminMiddleware");const router=express.Router();router.use(authenticate,requireAdmin);router.get("/dashboard",getDashboardStats);router.get("/users",getUsers);router.patch("/users/:id",updateUser);router.patch("/users/:id/status",setUserActiveStatus);router.get("/payments",getPayments);router.get("/bookings",getBookings);router.patch("/bookings/:id/status",updateBookingStatus);router.get("/gifts",getGiftsAdmin);router.patch("/gifts/:id",updateGift);router.get("/gift-transactions",getGiftTransactions);router.patch("/gift-transactions/:id/status",updateGiftStatus);router.get("/posts/pending",getPendingPosts);router.patch("/posts/:id/moderate",moderatePost);router.post("/announcements",sendAnnouncement);module.exports=router;
