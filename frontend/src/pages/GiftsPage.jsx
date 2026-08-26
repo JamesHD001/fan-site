@@ -8,7 +8,7 @@ const formatMoney = (amount, currency = 'USD') =>
   new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency,
-  }).format(amount)
+  }).format(Number(amount || 0) / 100)
 
 export default function GiftsPage() {
   const { token, user } = useAuth()
@@ -92,7 +92,6 @@ export default function GiftsPage() {
         throw new Error(data.message || 'Unable to start gift checkout.')
       }
 
-      localStorage.setItem('pendingPaymentType', 'GIFT')
       window.location.href = data.checkout.authorizationUrl
     } catch (purchaseError) {
       setError(purchaseError.message)
@@ -184,13 +183,7 @@ export default function GiftsPage() {
             </label>
             <label>
               Message (optional)
-              <textarea
-                rows={4}
-                maxLength={500}
-                placeholder="Add a message of appreciation…"
-                value={message}
-                onChange={(event) => setMessage(event.target.value)}
-              />
+              <textarea rows={4} maxLength={500} placeholder="Add a message of appreciation…" value={message} onChange={(event) => setMessage(event.target.value)} />
             </label>
             <p className="gift-total">
               Total: <strong>{formatMoney(selectedGift.price * quantity, selectedGift.currency)}</strong>
