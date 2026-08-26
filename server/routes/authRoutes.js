@@ -7,6 +7,7 @@ const {
 
 const authenticate = require("../middleware/authenticate");
 const validate = require("../middleware/validate");
+const { authLimiter } = require("../middleware/rateLimiters");
 
 const {
   registerValidator,
@@ -15,9 +16,8 @@ const {
 
 const router = express.Router();
 
-const { authLimiter } = require("../middleware/rateLimiters");
-
-router.post("/register",
+router.post(
+  "/register",
   authLimiter,
   registerValidator,
   validate,
@@ -25,22 +25,8 @@ router.post("/register",
 );
 
 router.post(
-  "/login", 
-  authLimiter, 
-  loginValidator, 
-  validate, 
-  login
-);
-
-router.post(
-  "/register",
-  registerValidator,
-  validate,
-  register
-);
-
-router.post(
   "/login",
+  authLimiter,
   loginValidator,
   validate,
   login
