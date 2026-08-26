@@ -1,3 +1,5 @@
+import './MembershipCard.css'
+
 const tierClass = (name = '') => name.toLowerCase().replace(/\s+/g, '-')
 
 const formatDate = (value) => {
