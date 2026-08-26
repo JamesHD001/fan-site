@@ -91,6 +91,12 @@ export default function MembershipPage() {
     }
   }
 
+  const handlePrintCard = () => {
+    document.body.classList.add('printing-membership-card')
+    window.print()
+    window.setTimeout(() => document.body.classList.remove('printing-membership-card'), 500)
+  }
+
   if (loading) {
     return (
       <main className="membership-experience">
@@ -134,7 +140,7 @@ export default function MembershipPage() {
               <h2>A place that<br /><em>belongs to you.</em></h2>
               <p>Your activated membership is represented by a digital card generated from your account. Your tier, member number, dates and status come directly from the membership record.</p>
             </div>
-            <MembershipCard card={membershipCard} />
+            <MembershipCard card={membershipCard} onPrint={handlePrintCard} />
           </div>
         </section>
       )}
