@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import AuthPage from './pages/AuthPage'
 import HomePage from './pages/HomePage'
 import MembershipPage from './pages/MembershipPage'
+import PaymentHistoryPage from './pages/PaymentHistoryPage'
 import MeetingsPage from './pages/MeetingsPage'
 import GiftsPage from './pages/GiftsPage'
 import NotificationsPage from './pages/NotificationsPage'
@@ -74,7 +75,7 @@ function PaymentCallback() {
 }
 
 function App() {
-  return <AuthProvider><BrowserRouter><SiteHeader /><Routes><Route path="/" element={<HomePage />} /><Route path="/login" element={<AuthPage mode="login" />} /><Route path="/register" element={<AuthPage mode="register" />} /><Route path="/payment/callback" element={<PaymentCallback />} /><Route path="/membership" element={<ProtectedRoute><MembershipPage /></ProtectedRoute>} /><Route path="/meetings" element={<MeetingsPage />} /><Route path="/gifts" element={<GiftsPage />} /><Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} /><Route path="/events" element={<EventsPage />} /><Route path="/community" element={<CommunityPage />} /><Route path="/admin" element={<ProtectedRoute><AdminDashboardPage /></ProtectedRoute>} /><Route path="*" element={<HomePage />} /></Routes><SiteFooter /></BrowserRouter></AuthProvider>
+  return <AuthProvider><BrowserRouter><SiteHeader /><Routes><Route path="/" element={<HomePage />} /><Route path="/login" element={<AuthPage mode="login" />} /><Route path="/register" element={<AuthPage mode="register" />} /><Route path="/payment/callback" element={<PaymentCallback />} /><Route path="/membership" element={<ProtectedRoute><MembershipPage /></ProtectedRoute>} /><Route path="/membership/payments" element={<ProtectedRoute><PaymentHistoryPage /></ProtectedRoute>} /><Route path="/meetings" element={<MeetingsPage />} /><Route path="/gifts" element={<GiftsPage />} /><Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} /><Route path="/events" element={<EventsPage />} /><Route path="/community" element={<CommunityPage />} /><Route path="/admin" element={<ProtectedRoute><AdminDashboardPage /></ProtectedRoute>} /><Route path="*" element={<HomePage />} /></Routes><SiteFooter /></BrowserRouter></AuthProvider>
 }
 
 export default App
