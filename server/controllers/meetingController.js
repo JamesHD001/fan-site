@@ -22,11 +22,17 @@ const getActiveMembershipTier = async (userId) => {
 
 const getMeetingTypes = async (req, res) => {
   try {
-    const meetingTypes = await MeetingType.find({ isActive: true }).sort({ sortOrder: 1, price: 1 });
+    const meetingTypes = await MeetingType.find({ isActive: true }).sort({
+      sortOrder: 1,
+      price: 1,
+    });
     return res.status(200).json({ success: true, data: { meetingTypes } });
   } catch (error) {
     console.error("Get meeting types error:", error);
-    return res.status(500).json({ success: false, message: "Unable to retrieve meeting types." });
+    return res.status(500).json({
+      success: false,
+      message: "Unable to retrieve meeting types.",
+    });
   }
 };
 
@@ -38,7 +44,10 @@ const getMyBookings = async (req, res) => {
     return res.status(200).json({ success: true, data: { bookings } });
   } catch (error) {
     console.error("Get bookings error:", error);
-    return res.status(500).json({ success: false, message: "Unable to retrieve bookings." });
+    return res.status(500).json({
+      success: false,
+      message: "Unable to retrieve bookings.",
+    });
   }
 };
 
@@ -46,29 +55,53 @@ const initializeBookingPayment = async (req, res) => {
   try {
     const { meetingTypeId, scheduledFor, notes } = req.body;
     if (!meetingTypeId || !scheduledFor) {
-      return res.status(400).json({ success: false, message: "Meeting type and preferred date/time are required." });
+      return res.status(400).json({
+        success: false,
+        message: "Meeting type and preferred date/time are required.",
+      });
     }
 
     const slotDate = new Date(scheduledFor);
     if (Number.isNaN(slotDate.getTime())) {
-      return res.status(400).json({ success: false, message: "Invalid date/time provided for the meeting." });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid date/time provided for the meeting.",
+      });
     }
     if (slotDate.getTime() < Date.now()) {
-      return res.status(400).json({ success: false, message: "Meeting date must be in the future." });
+      return res.status(400).json({
+        success: false,
+        message: "Meeting date must be in the future.",
+      });
     }
 
-    const meetingType = await MeetingType.findOne({ _id: meetingTypeId, isActive: true });
+    const meetingType = await MeetingType.findOne({
+      _id: meetingTypeId,
+      isActive: true,
+    });
     if (!meetingType) {
-      return res.status(404).json({ success: false, message: "Meeting type not found." });
+      return res.status(404).json({
+        success: false,
+        message: "Meeting type not found.",
+      });
     }
 
     const plan = await getActiveMembershipTier(req.user._id);
     const requiredTier = meetingType.minimumMembershipTier;
     if (!plan) {
-      return res.status(403).json({ success: false, message: "An active membership is required to book a meeting." });
+      return res.status(403).json({
+        success: false,
+        message: "An active membership is required to book a meeting.",
+      });
     }
-    if (TIER_ORDER.indexOf(plan.minimumMeetingTier) < TIER_ORDER.indexOf(requiredTier)) {
-      return res.status(403).json({ success: false, message: `The ${meetingType.name} requires at least a ${requiredTier} membership.` });
+    if (
+      TIER_ORDER.indexOf(plan.minimumMeetingTier) <
+      TIER_ORDER.indexOf(requiredTier)
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: `The ${meetingType.name} requires at least a ${requiredTier} membership.`,
+      });
     }
 
     const existingBooking = await Booking.findOne({
@@ -76,11 +109,16 @@ const initializeBookingPayment = async (req, res) => {
       status: { $in: ["PENDING_PAYMENT", "CONFIRMED"] },
     });
     if (existingBooking) {
-      return res.status(409).json({ success: false, message: "That time slot is no longer available. Please choose another." });
+      return res.status(409).json({
+        success: false,
+        message: "That time slot is no longer available. Please choose another.",
+      });
     }
 
     const reference = generateBookingReference();
-    const { ngnAmountMinor, exchangeRate } = await convertUsdToNgn(meetingType.price);
+    const { ngnAmountMinor, exchangeRate } = await convertUsdToNgn(
+      meetingType.price
+    );
 
     const booking = await Booking.create({
       user: req.user._id,
@@ -94,6 +132,7 @@ const initializeBookingPayment = async (req, res) => {
     const payment = await Payment.create({
       user: req.user._id,
       type: "MEETING",
+      booking: booking._id,
       reference,
       originalAmount: meetingType.price,
       originalCurrency: meetingType.currency,
@@ -138,7 +177,11 @@ const initializeBookingPayment = async (req, res) => {
             currency: meetingType.currency,
           },
         },
-        payment: { amount: ngnAmountMinor, currency: "NGN", exchangeRate },
+        payment: {
+          amount: ngnAmountMinor,
+          currency: "NGN",
+          exchangeRate,
+        },
         checkout: {
           authorizationUrl: paystackResponse.data.authorization_url,
           accessCode: paystackResponse.data.access_code,
@@ -147,12 +190,18 @@ const initializeBookingPayment = async (req, res) => {
       });
     } catch (paystackError) {
       await Payment.findByIdAndUpdate(payment._id, { status: "FAILED" });
-      await Booking.findByIdAndUpdate(booking._id, { status: "CANCELLED", cancelledAt: new Date() });
+      await Booking.findByIdAndUpdate(booking._id, {
+        status: "CANCELLED",
+        cancelledAt: new Date(),
+      });
       throw paystackError;
     }
   } catch (error) {
     console.error("Initialize booking payment error:", error);
-    return res.status(500).json({ success: false, message: error.message || "Unable to initialize booking payment." });
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Unable to initialize booking payment.",
+    });
   }
 };
 
