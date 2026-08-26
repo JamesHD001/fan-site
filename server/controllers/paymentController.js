@@ -4,6 +4,10 @@ const Payment = require("../models/Payment");
 const { verifyTransaction } = require("../services/paystackService");
 const { settleSuccessfulPayment } = require("../services/paymentSettlementService");
 const {
+  isValidPaystackAmount,
+  calculateNgnCustomerCharge,
+} = require("../services/paymentService");
+const {
   notifyMembershipActivated,
   notifyBookingConfirmed,
   notifyGiftCompleted,
@@ -95,16 +99,18 @@ const verifyPayment = async (req, res) => {
 
     const expectedAmount = Number(payment.amount);
     const receivedAmount = Number(transaction.amount);
+    const feeAdjustedAmount =
+      payment.currency?.toUpperCase() === "NGN" &&
+      Number.isInteger(expectedAmount)
+        ? calculateNgnCustomerCharge(expectedAmount)
+        : null;
 
-    if (
-      !Number.isInteger(expectedAmount) ||
-      !Number.isInteger(receivedAmount) ||
-      receivedAmount !== expectedAmount
-    ) {
+    if (!isValidPaystackAmount(expectedAmount, receivedAmount)) {
       console.error("Paystack payment amount mismatch", {
         reference,
         expectedAmount,
         receivedAmount,
+        feeAdjustedAmount,
         paymentCurrency: payment.currency,
         transactionCurrency: transaction.currency,
         paymentId: payment._id.toString(),
@@ -116,6 +122,7 @@ const verifyPayment = async (req, res) => {
         details: {
           expectedAmount,
           receivedAmount,
+          feeAdjustedAmount,
           currency: transaction.currency || payment.currency,
         },
       });
