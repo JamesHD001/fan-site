@@ -4,6 +4,14 @@ import { useAuth } from '../context/AuthContext'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
+const fromMinorUnits = (amount) => Number(amount || 0) / 100
+
+const formatMinorCurrency = (amount, currency = 'USD') =>
+  new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+  }).format(fromMinorUnits(amount))
+
 export default function MembershipPage() {
   const { token } = useAuth()
   const [plans, setPlans] = useState([])
@@ -72,7 +80,6 @@ export default function MembershipPage() {
         throw new Error(data.message || 'Unable to start checkout.')
       }
 
-      // Preserve the payment type for the generic callback page.
       localStorage.setItem('pendingPaymentType', 'MEMBERSHIP')
       window.location.href = data.checkout.authorizationUrl
     } catch (err) {
@@ -80,12 +87,6 @@ export default function MembershipPage() {
       setPurchasing(null)
     }
   }
-
-  const formatPrice = (plan) =>
-    new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: plan.currency || 'USD',
-    }).format(plan.price)
 
   if (loading) {
     return (
@@ -131,7 +132,7 @@ export default function MembershipPage() {
             {plan.badge && <span className="plan-badge">{plan.badge}</span>}
             <h2>{plan.name}</h2>
             <p className="plan-price">
-              {formatPrice(plan)}
+              {formatMinorCurrency(plan.price, plan.currency || 'USD')}
               <span>/{(plan.durationUnit || 'YEAR').toLowerCase()}</span>
             </p>
             <p className="plan-description">{plan.description}</p>
