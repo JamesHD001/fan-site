@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+const NOTIFICATION_POLL_MS = 10000
 
 const links = [
   { to: '/events', label: 'Events' },
@@ -18,21 +19,37 @@ export default function SiteHeader() {
   const [unreadCount, setUnreadCount] = useState(0)
   const closeMenu = () => setMenuOpen(false)
 
+  const loadUnreadCount = useCallback(async () => {
+    if (!token) { setUnreadCount(0); return }
+    try {
+      const response = await fetch(`${API_BASE_URL}/notifications/unread-count`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!response.ok) return
+      const data = await response.json()
+      if (data.success) setUnreadCount(Math.max(0, Number(data.unreadCount) || 0))
+    } catch { /* Notification polling must never block navigation. */ }
+  }, [token])
+
   useEffect(() => {
     if (!token) { setUnreadCount(0); return undefined }
     let cancelled = false
-    const loadUnreadCount = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/notifications/unread-count`, { headers: { Authorization: `Bearer ${token}` } })
-        if (!response.ok) return
-        const data = await response.json()
-        if (!cancelled) setUnreadCount(Number(data.unreadCount ?? data.count ?? 0))
-      } catch { /* Notifications should never block navigation. */ }
+    const refresh = async () => { if (!cancelled) await loadUnreadCount() }
+    refresh()
+    const interval = window.setInterval(refresh, NOTIFICATION_POLL_MS)
+    const handleFocus = () => refresh()
+    const handleVisibility = () => { if (document.visibilityState === 'visible') refresh() }
+    window.addEventListener('focus', handleFocus)
+    document.addEventListener('visibilitychange', handleVisibility)
+    window.addEventListener('notifications:changed', refresh)
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+      window.removeEventListener('focus', handleFocus)
+      document.removeEventListener('visibilitychange', handleVisibility)
+      window.removeEventListener('notifications:changed', refresh)
     }
-    loadUnreadCount()
-    const interval = window.setInterval(loadUnreadCount, 30000)
-    return () => { cancelled = true; window.clearInterval(interval) }
-  }, [token])
+  }, [loadUnreadCount, token])
 
   return (
     <header className="site-header">
