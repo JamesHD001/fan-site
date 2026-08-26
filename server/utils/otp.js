@@ -1,0 +1,10 @@
+const crypto = require("crypto");
+const OTP_LENGTH = 6;
+const OTP_TTL_MS = 10 * 60 * 1000;
+const MAX_ATTEMPTS = 5;
+const RESEND_COOLDOWN_MS = 60 * 1000;
+const MAX_RESENDS = 5;
+const generateOtp = () => crypto.randomInt(0, 10 ** OTP_LENGTH).toString().padStart(OTP_LENGTH, "0");
+const hashOtp = (otp) => crypto.createHash("sha256").update(String(otp)).digest("hex");
+const getOtpExpiry = () => new Date(Date.now() + OTP_TTL_MS);
+module.exports = { OTP_TTL_MS, MAX_ATTEMPTS, RESEND_COOLDOWN_MS, MAX_RESENDS, generateOtp, hashOtp, getOtpExpiry };
