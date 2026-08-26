@@ -21,7 +21,7 @@ const getInitials = (name = '') => {
   return parts.slice(0, 2).map((part) => part[0]).join('').toUpperCase()
 }
 
-export default function MembershipCard({ card }) {
+export default function MembershipCard({ card, onPrint }) {
   const tier = tierClass(card?.membershipType || 'supporter')
   const status = card?.status || 'ACTIVE'
   const memberName = card?.memberName || 'Community Member'
@@ -87,6 +87,12 @@ export default function MembershipCard({ card }) {
         <span>AUTHENTIC DIGITAL MEMBERSHIP</span>
         <span>{card?.membershipNumber || 'MEMBER'}</span>
       </div>
+
+      {onPrint && (
+        <button type="button" className="digital-card-print-button button button-ghost" onClick={onPrint}>
+          Print membership card
+        </button>
+      )}
     </div>
   )
 }
