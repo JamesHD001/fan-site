@@ -116,10 +116,14 @@ export default function MembershipPage() {
             <div className="membership-expiring-notice" role="status"><div><b>Your membership expires soon.</b><span>Renew now to keep uninterrupted access to your community benefits.</span></div><button className="button button-primary" onClick={() => document.getElementById('membership-plans')?.scrollIntoView({ behavior: 'smooth' })}>Renew now</button></div>
           )}
 
+<<<<<<< HEAD
           <div className="member-card-showcase">
             <div className="member-card-copy"><span className="eyebrow">YOUR DIGITAL MEMBERSHIP CARD</span><h2>A place that<br /><em>belongs to you.</em></h2><p>Your activated membership is represented by a digital card generated from your account. Your tier, member number, dates and status come directly from your membership record.</p></div>
             <MembershipCard card={membershipCard} onPrint={handlePrintCard} />
           </div>
+=======
+          <div className="member-card-showcase"><div className="member-card-copy"><span className="eyebrow">YOUR DIGITAL MEMBERSHIP CARD</span><h2>A place that<br /><em>belongs to you.</em></h2><p>Your activated membership is represented by a digital card generated from your account. Your tier, member number, dates and status come directly from the membership record.</p></div><MembershipCard card={membershipCard} onPrint={handlePrintCard} /></div>
+>>>>>>> 46d13f82a1165a4c076ad6529f91b50c07c251eb
         </section>
       )}
 
@@ -127,18 +131,10 @@ export default function MembershipPage() {
 
       <section id="membership-plans" className="plans-section page-container">
         <div className="section-intro"><div><span className="eyebrow">{canRenew ? 'RENEW OR JOIN' : 'MEMBERSHIP TIERS'}</span><h2>{canRenew ? 'Choose your membership.' : 'Three ways to belong.'}</h2></div><p>Every tier is designed around the same community—your level simply determines how much more of the experience opens up.</p></div>
-        <div className="premium-plans">
-          {plans.map((plan, index) => {
-            const current = membership?.status === 'ACTIVE' && (membership?.plan?._id === plan._id || membership?.plan === plan._id)
-            const featured = plan.name === 'Insider'
-            return <article key={plan._id} className={`premium-plan premium-plan-${tierClass(plan.name)} ${featured ? 'is-featured' : ''} ${current ? 'is-current' : ''}`}>
-              <div className="plan-topline"><span>0{index + 1}</span>{featured && <b>RECOMMENDED</b>}</div><div className="plan-symbol" aria-hidden="true">{plan.name.slice(0, 1)}</div><p className="plan-tier">{plan.badge || plan.name}</p><h3>{plan.name}</h3><p className="plan-price-large">{formatCurrency(plan.price, plan.currency || 'USD')}<small> / {(plan.durationUnit || 'YEAR').toLowerCase()}</small></p><p className="plan-description-large">{plan.description}</p><div className="plan-divider" /><ul>{plan.benefits?.map((benefit) => <li key={benefit}><span>✓</span>{benefit}</li>)}</ul><div className="plan-action">{current ? <button className="button button-ghost" disabled>Current membership</button> : <button className="button button-primary" disabled={purchasing === plan._id} onClick={() => handlePurchase(plan._id)}>{purchasing === plan._id ? 'Opening secure checkout…' : membership ? `Renew ${plan.name}` : `Join ${plan.name}`}</button>}</div>
-            </article>
-          })}
-        </div>
+        <div className="premium-plans">{plans.map((plan, index) => { const current = membership?.status === 'ACTIVE' && (membership?.plan?._id === plan._id || membership?.plan === plan._id); const featured = plan.name === 'Insider'; return <article key={plan._id} className={`premium-plan premium-plan-${tierClass(plan.name)} ${featured ? 'is-featured' : ''} ${current ? 'is-current' : ''}`}><div className="plan-topline"><span>0{index + 1}</span>{featured && <b>RECOMMENDED</b>}</div><div className="plan-symbol" aria-hidden="true">{plan.name.slice(0, 1)}</div><p className="plan-tier">{plan.badge || plan.name}</p><h3>{plan.name}</h3><p className="plan-price-large">{formatCurrency(plan.price, plan.currency || 'USD')}<small> / {(plan.durationUnit || 'YEAR').toLowerCase()}</small></p><p className="plan-description-large">{plan.description}</p><div className="plan-divider" /><ul>{plan.benefits?.map((benefit) => <li key={benefit}><span>✓</span>{benefit}</li>)}</ul><div className="plan-action">{current ? <button className="button button-ghost" disabled>Current membership</button> : <button className="button button-primary" disabled={purchasing === plan._id} onClick={() => handlePurchase(plan._id)}>{purchasing === plan._id ? 'Opening secure checkout…' : membership ? `Renew ${plan.name}` : `Join ${plan.name}`}</button>}</div></article> })}</div>
       </section>
 
-      <section className="membership-note"><div className="page-container membership-note-inner"><span className="eyebrow">A DIGITAL MEMBERSHIP CARD</span><h2>Carry your place<br />with you.</h2><p>Once your membership is activated, your tier becomes part of your fan profile and digital membership experience.</p><Link className="text-link" to="/community">Enter the community <span>→</span></Link></div></section>
+      <section className="membership-note"><div className="page-container membership-note-inner"><span className="eyebrow">A DIGITAL MEMBERSHIP CARD</span><h2>Carry your place<br />with you.</h2><p>Once your membership is activated, your tier becomes part of your fan profile and digital membership experience.</p><div className="membership-note-links"><Link className="text-link" to="/community">Enter the community <span>→</span></Link><Link className="text-link" to="/membership/payments">View payment history <span>→</span></Link></div></div></section>
       {plans.length === 0 && !error && <section className="empty-membership page-container"><h2>Membership is being prepared.</h2><p>Check back soon for available community tiers.</p></section>}
       <div className="membership-back page-container"><Link to="/">← Back to home</Link></div>
     </main>
