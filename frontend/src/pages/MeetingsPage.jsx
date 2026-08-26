@@ -4,116 +4,15 @@ import { useAuth } from '../context/AuthContext'
 import '../styles/meetings.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
-
 const getMinBookingDateTime = () => new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)
 const formatMinorCurrency = (amount, currency = 'USD') => new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(Number(amount || 0) / 100)
 
 export default function MeetingsPage() {
-  const { token, user } = useAuth()
-  const [meetingTypes, setMeetingTypes] = useState([])
-  const [bookings, setBookings] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [selectedType, setSelectedType] = useState(null)
-  const [scheduledFor, setScheduledFor] = useState('')
-  const [notes, setNotes] = useState('')
-  const [minDateTime, setMinDateTime] = useState('')
-  const [bookingError, setBookingError] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-
-  useEffect(() => {
-    let cancelled = false
-    const loadData = async () => {
-      try {
-        const requests = [fetch(`${API_BASE_URL}/meetings/types`)]
-        if (token) requests.push(fetch(`${API_BASE_URL}/meetings/bookings`, { headers: { Authorization: `Bearer ${token}` } }))
-        const [typesRes, bookingsRes] = await Promise.all(requests)
-        const typesData = await typesRes.json()
-        if (!cancelled && typesRes.ok && typesData.success) setMeetingTypes(typesData.data?.meetingTypes || [])
-        if (bookingsRes) {
-          const bookingsData = await bookingsRes.json()
-          if (!cancelled && bookingsRes.ok && bookingsData.success) setBookings(bookingsData.data?.bookings || [])
-        }
-      } catch { if (!cancelled) setBookingError('Unable to load meetings. Please try again.') }
-      finally { if (!cancelled) setLoading(false) }
-    }
-    loadData()
-    return () => { cancelled = true }
-  }, [token])
-
-  const openBooking = (type) => {
-    setSelectedType(type)
-    setMinDateTime(getMinBookingDateTime())
-    setScheduledFor('')
-    setNotes('')
-    setBookingError('')
-  }
-
-  const handleBooking = async (event) => {
-    event.preventDefault()
-    if (!selectedType) return
-    setBookingError('')
-    setSubmitting(true)
-    try {
-      const response = await fetch(`${API_BASE_URL}/meetings/bookings/initialize`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ meetingTypeId: selectedType._id, scheduledFor: new Date(scheduledFor).toISOString(), notes }),
-      })
-      const data = await response.json()
-      if (!response.ok || !data.success) throw new Error(data.message || 'Unable to start booking checkout.')
-      window.location.href = data.checkout.authorizationUrl
-    } catch (err) { setBookingError(err.message); setSubmitting(false) }
-  }
-
+  const { token, user } = useAuth(); const [meetingTypes, setMeetingTypes] = useState([]); const [bookings, setBookings] = useState([]); const [loading, setLoading] = useState(true); const [selectedType, setSelectedType] = useState(null); const [scheduledFor, setScheduledFor] = useState(''); const [notes, setNotes] = useState(''); const [minDateTime, setMinDateTime] = useState(''); const [bookingError, setBookingError] = useState(''); const [submitting, setSubmitting] = useState(false); const [otp, setOtp] = useState(''); const [needsOtp, setNeedsOtp] = useState(false); const [otpSending, setOtpSending] = useState(false)
+  useEffect(() => { let cancelled = false; const loadData = async () => { try { const requests = [fetch(`${API_BASE_URL}/meetings/types`)]; if (token) requests.push(fetch(`${API_BASE_URL}/meetings/bookings`, { headers: { Authorization: `Bearer ${token}` } })); const [typesRes, bookingsRes] = await Promise.all(requests); const typesData = await typesRes.json(); if (!cancelled && typesRes.ok && typesData.success) setMeetingTypes(typesData.data?.meetingTypes || []); if (bookingsRes) { const bookingsData = await bookingsRes.json(); if (!cancelled && bookingsRes.ok && bookingsData.success) setBookings(bookingsData.data?.bookings || []) } } catch { if (!cancelled) setBookingError('Unable to load meetings. Please try again.') } finally { if (!cancelled) setLoading(false) } }; loadData(); return () => { cancelled = true } }, [token])
+  const openBooking = (type) => { setSelectedType(type); setMinDateTime(getMinBookingDateTime()); setScheduledFor(''); setNotes(''); setBookingError(''); setNeedsOtp(false); setOtp('') }
+  const requestPurchaseOtp = async () => { setOtpSending(true); setBookingError(''); try { const r = await fetch(`${API_BASE_URL}/otp/purchase/request`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }); const d = await r.json(); if (!r.ok || !d.success) throw new Error(d.message || 'Unable to send verification code.'); setNeedsOtp(true) } catch (e) { setBookingError(e.message) } finally { setOtpSending(false) } }
+  const handleBooking = async (event) => { event.preventDefault(); if (!selectedType) return; setBookingError(''); setSubmitting(true); try { const response = await fetch(`${API_BASE_URL}/meetings/bookings/initialize`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ meetingTypeId: selectedType._id, scheduledFor: new Date(scheduledFor).toISOString(), notes, ...(otp ? { otp } : {}) }) }); const data = await response.json(); if (response.status === 428 && data.requiresOtp) { setNeedsOtp(true); await requestPurchaseOtp(); return } if (!response.ok || !data.success) throw new Error(data.message || 'Unable to start booking checkout.'); window.location.href = data.checkout.authorizationUrl } catch (err) { setBookingError(err.message) } finally { setSubmitting(false) } }
   if (loading) return <main className="meetings-page"><div className="meetings-hero"><div><p className="eyebrow">PRIVATE EXPERIENCES</p><h1>Meet Keanu.</h1></div><p className="meetings-hero-copy">A personal virtual experience designed for fans who want to connect beyond the community feed.</p></div></main>
-
-  return (
-    <main className="meetings-page">
-      <header className="meetings-hero">
-        <div><p className="eyebrow">PRIVATE EXPERIENCES</p><h1>Meet Keanu.</h1></div>
-        <div className="meetings-hero-copy"><p>Book a private virtual session and create a memorable fan experience. Availability and access depend on the selected experience and your membership tier.</p></div>
-      </header>
-
-      {!user && <div className="meeting-login"><Link to="/login">Sign in</Link> to book a meeting. Membership tiers may be required for selected experiences.</div>}
-
-      {bookingError && !selectedType && <div className="meeting-login">{bookingError}</div>}
-
-      <section className="meeting-grid" aria-label="Meeting experiences">
-        {meetingTypes.map((type, index) => (
-          <article key={type._id} className="meeting-card">
-            <span className="meeting-tier">{type.minimumMembershipTier || 'COMMUNITY'} · EXPERIENCE {String(index + 1).padStart(2, '0')}</span>
-            <h2>{type.name}</h2>
-            <p className="meeting-price">{formatMinorCurrency(type.price, type.currency || 'USD')} <span>· {type.duration} minutes</span></p>
-            <p className="meeting-description">{type.description}</p>
-            {user ? <button className="button button-primary" type="button" onClick={() => openBooking(type)}>Book this experience →</button> : <Link className="button button-ghost" to="/login">Sign in to book</Link>}
-          </article>
-        ))}
-      </section>
-
-      {token && bookings.length > 0 && (
-        <section className="booking-section">
-          <p className="eyebrow">YOUR EXPERIENCES</p>
-          <h2>Your bookings</h2>
-          <ul className="booking-list">
-            {bookings.map((booking) => <li key={booking._id} className="booking-item"><div><strong>{booking.meetingType?.name || 'Meeting'}</strong><span className="muted"> · {new Date(booking.scheduledFor).toLocaleString()}</span></div><span className="status-pill">{booking.status.replace('_', ' ')}</span></li>)}
-          </ul>
-        </section>
-      )}
-
-      <div className="section-shell" style={{ paddingBottom: 0 }}><Link className="text-link" to="/membership">Explore membership access <span>→</span></Link></div>
-
-      {selectedType && (
-        <form className="meeting-modal-backdrop" onSubmit={handleBooking}>
-          <div className="meeting-modal" role="dialog" aria-modal="true" aria-labelledby="meeting-modal-title">
-            <p className="eyebrow">BOOK YOUR EXPERIENCE</p>
-            <h2 id="meeting-modal-title">{selectedType.name}</h2>
-            <label>Preferred date &amp; time<input type="datetime-local" required min={minDateTime} value={scheduledFor} onChange={(e) => setScheduledFor(e.target.value)} /></label>
-            <label>Notes (optional)<textarea rows={4} maxLength={1000} placeholder="Anything you'd like to mention?" value={notes} onChange={(e) => setNotes(e.target.value)} /></label>
-            {bookingError && <p className="meeting-error">{bookingError}</p>}
-            <div className="meeting-modal-actions"><button className="button button-primary" type="submit" disabled={submitting}>{submitting ? 'Redirecting to Paystack…' : 'Continue to secure payment'}</button><button className="button button-ghost" type="button" disabled={submitting} onClick={() => setSelectedType(null)}>Cancel</button></div>
-          </div>
-        </form>
-      )}
-    </main>
-  )
+  return <main className="meetings-page"><header className="meetings-hero"><div><p className="eyebrow">PRIVATE EXPERIENCES</p><h1>Meet Keanu.</h1></div><div className="meetings-hero-copy"><p>Book a private virtual session and create a memorable fan experience. Availability and access depend on the selected experience and your membership tier.</p></div></header>{!user && <div className="meeting-login"><Link to="/login">Sign in</Link> to book a meeting. Membership tiers may be required for selected experiences.</div>}{bookingError && !selectedType && <div className="meeting-login">{bookingError}</div>}<section className="meeting-grid" aria-label="Meeting experiences">{meetingTypes.map((type, index) => <article key={type._id} className="meeting-card"><span className="meeting-tier">{type.minimumMembershipTier || 'COMMUNITY'} · EXPERIENCE {String(index + 1).padStart(2, '0')}</span><h2>{type.name}</h2><p className="meeting-price">{formatMinorCurrency(type.price, type.currency || 'USD')} <span>· {type.duration} minutes</span></p><p className="meeting-description">{type.description}</p>{user ? <button className="button button-primary" type="button" onClick={() => openBooking(type)}>Book this experience →</button> : <Link className="button button-ghost" to="/login">Sign in to book</Link>}</article>)}</section>{token && bookings.length > 0 && <section className="booking-section"><p className="eyebrow">YOUR EXPERIENCES</p><h2>Your bookings</h2><ul className="booking-list">{bookings.map((booking) => <li key={booking._id} className="booking-item"><div><strong>{booking.meetingType?.name || 'Meeting'}</strong><span className="muted"> · {new Date(booking.scheduledFor).toLocaleString()}</span></div><span className="status-pill">{booking.status.replace('_', ' ')}</span></li>)}</ul></section>}<div className="section-shell" style={{ paddingBottom: 0 }}><Link className="text-link" to="/membership">Explore membership access <span>→</span></Link></div>{selectedType && <form className="meeting-modal-backdrop" onSubmit={handleBooking}><div className="meeting-modal" role="dialog" aria-modal="true" aria-labelledby="meeting-modal-title"><p className="eyebrow">BOOK YOUR EXPERIENCE</p><h2 id="meeting-modal-title">{selectedType.name}</h2><label>Preferred date &amp; time<input type="datetime-local" required min={minDateTime} value={scheduledFor} onChange={(e) => setScheduledFor(e.target.value)} /></label><label>Notes (optional)<textarea rows={4} maxLength={1000} placeholder="Anything you'd like to mention?" value={notes} onChange={(e) => setNotes(e.target.value)} /></label>{needsOtp && <label>Purchase verification code<input inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} placeholder="000000" required /></label>}{bookingError && <p className="meeting-error">{bookingError}</p>}<div className="meeting-modal-actions"><button className="button button-primary" type="submit" disabled={submitting || (needsOtp && otp.length !== 6)}>{submitting ? 'Redirecting to Paystack…' : needsOtp ? 'Verify & Continue' : 'Continue to secure payment'}</button>{needsOtp && <button className="button button-ghost" type="button" disabled={otpSending} onClick={requestPurchaseOtp}>{otpSending ? 'Sending…' : 'Resend code'}</button>}<button className="button button-ghost" type="button" disabled={submitting} onClick={() => setSelectedType(null)}>Cancel</button></div></div></form>}</main>
 }
