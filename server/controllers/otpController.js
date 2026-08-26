@@ -5,12 +5,11 @@ const requestOtp = async (req, res) => {
     const { email, purpose } = req.body;
     if (!email || !["REGISTRATION", "PURCHASE"].includes(purpose)) return res.status(400).json({ success: false, message: "Email and a valid OTP purpose are required." });
     const result = await createOtp({ email, user: req.user?._id || null, purpose });
-    const response = { success: true, message: "OTP generated successfully.", expiresAt: result.record.expiresAt };
-    if (process.env.NODE_ENV !== "production" && process.env.OTP_EXPOSE_IN_DEVELOPMENT === "true") response.otp = result.otp;
-    return res.status(201).json(response);
+    return res.status(201).json({ success: true, message: "A verification code has been sent to your email address.", expiresAt: result.record.expiresAt });
   } catch (error) {
     if (error.code === "OTP_COOLDOWN" || error.code === "OTP_RESEND_LIMIT") return res.status(429).json({ success: false, message: error.message });
-    return res.status(500).json({ success: false, message: "Unable to generate OTP." });
+    if (error.code === "EMAIL_NOT_CONFIGURED" || error.code === "EMAIL_DELIVERY_FAILED") return res.status(503).json({ success: false, message: "Email delivery is currently unavailable. Please try again later." });
+    return res.status(500).json({ success: false, message: "Unable to send OTP." });
   }
 };
 
