@@ -36,12 +36,12 @@ function PaymentCallback() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { token, loading: authLoading, isAuthenticated } = useAuth()
-  const [state, setState] = useState({ status: 'loading', message: 'Verifying your payment…', type: '', membership: null, booking: null, transaction: null })
+  const [state, setState] = useState({ status: 'loading', message: 'Verifying your payment…', type: '', membership: null, booking: null, transaction: null, details: null })
 
   useEffect(() => {
     if (authLoading) return
     const reference = searchParams.get('reference') || searchParams.get('trxref')
-    if (!reference) { setState({ status: 'error', message: 'No payment reference was provided.', type: '', membership: null, booking: null, transaction: null }); return }
+    if (!reference) { setState({ status: 'error', message: 'No payment reference was provided.', type: '', membership: null, booking: null, transaction: null, details: null }); return }
     if (!isAuthenticated || !token) { navigate('/login', { replace: true, state: { from: `/payment/callback?reference=${encodeURIComponent(reference)}` } }); return }
     let cancelled = false
     const verifyPayment = async () => {
@@ -49,9 +49,13 @@ function PaymentCallback() {
         const response = await fetch(`${API_BASE_URL}/payments/verify`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ reference }) })
         const data = await response.json()
         if (cancelled) return
-        if (!response.ok || !data.success) throw new Error(data.message || 'We could not verify this payment.')
-        setState({ status: 'success', type: data.type || '', message: data.message || 'Payment verified successfully.', membership: data.membership || null, booking: data.booking || null, transaction: data.transaction || null })
-      } catch (error) { if (!cancelled) setState({ status: 'error', message: error.message, type: '', membership: null, booking: null, transaction: null }) }
+        if (!response.ok || !data.success) {
+          const verificationError = new Error(data.message || 'We could not verify this payment.')
+          verificationError.details = data.details || null
+          throw verificationError
+        }
+        setState({ status: 'success', type: data.type || '', message: data.message || 'Payment verified successfully.', membership: data.membership || null, booking: data.booking || null, transaction: data.transaction || null, details: null })
+      } catch (error) { if (!cancelled) setState({ status: 'error', message: error.message, type: '', membership: null, booking: null, transaction: null, details: error.details || null }) }
     }
     verifyPayment()
     return () => { cancelled = true }
@@ -66,7 +70,7 @@ function PaymentCallback() {
     const detail = state.membership ? [['Membership', state.membership.plan?.name || state.membership.plan || 'Fan Membership'], ['Status', state.membership.status || 'ACTIVE']] : state.booking ? [['Meeting', state.booking.meetingType?.name || 'Meeting'], ['Status', state.booking.status || 'CONFIRMED']] : state.transaction ? [['Gift', state.transaction.gift?.name || 'Gift'], ['Status', state.transaction.status || 'COMPLETED']] : []
     return <main className="payment-page"><div className="payment-card success-card"><div className="payment-icon success-icon">✓</div><p className="eyebrow">PAYMENT CONFIRMED</p><h1>{state.type === 'MEMBERSHIP' ? 'Welcome to the community.' : state.type === 'MEETING' ? 'Your meeting is confirmed.' : 'Your gift was sent.'}</h1><p>{state.message}</p>{detail.length > 0 && <div className="membership-summary">{detail.map(([label, value]) => <span key={label}>{label}<strong>{value}</strong></span>)}</div>}<div className="payment-actions"><Link className="primary-button" to={destination}>{destinationLabel}</Link><button className="secondary-button" type="button" onClick={() => navigate('/')}>Return Home</button></div></div></main>
   }
-  return <main className="payment-page"><div className="payment-card error-card"><div className="payment-icon error-icon">!</div><p className="eyebrow">PAYMENT VERIFICATION</p><h1>We couldn't verify the payment.</h1><p>{state.message}</p><p className="muted">Your account has not been shown as successfully activated by this page.</p><div className="payment-actions"><button className="primary-button" type="button" onClick={() => window.location.reload()}>Try Again</button><button className="secondary-button" type="button" onClick={() => navigate('/')}>Return Home</button></div></div></main>
+  return <main className="payment-page"><div className="payment-card error-card"><div className="payment-icon error-icon">!</div><p className="eyebrow">PAYMENT VERIFICATION</p><h1>We couldn't verify the payment.</h1><p>{state.message}</p>{state.details && <div className="membership-summary"><span>Expected amount<strong>{state.details.expectedAmount}</strong></span><span>Paystack amount<strong>{state.details.receivedAmount}</strong></span><span>Currency<strong>{state.details.currency}</strong></span></div>}<p className="muted">Your account has not been shown as successfully activated by this page.</p><div className="payment-actions"><button className="primary-button" type="button" onClick={() => window.location.reload()}>Try Again</button><button className="secondary-button" type="button" onClick={() => navigate('/')}>Return Home</button></div></div></main>
 }
 
 function App() {
