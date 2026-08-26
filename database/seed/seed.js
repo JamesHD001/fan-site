@@ -43,39 +43,28 @@ const seedDatabase = async () => {
     await Gift.insertMany(giftData);
 
     console.log(`Created celebrity: ${celebrity.name}`);
-    console.log(
-      `Created ${membershipData.length} membership plans.`
-    );
-    console.log(
-      `Created ${meetingData.length} meeting types.`
-    );
-    console.log(
-      `Created ${giftData.length} gifts.`
-    );
+    console.log(`Created ${membershipData.length} membership plans.`);
+    console.log(`Created ${meetingData.length} meeting types.`);
+    console.log(`Created ${giftData.length} gifts.`);
 
-    /*
-     * Seed the admin account.
-     * Credentials come from .env with safe defaults.
-     */
-    const adminEmail = (
-      process.env.ADMIN_EMAIL || "admin@fancommunity.com"
-    ).toLowerCase();
+    if (
+      !process.env.ADMIN_EMAIL ||
+      !process.env.ADMIN_USERNAME ||
+      !process.env.ADMIN_PASSWORD
+    ) {
+      throw new Error(
+        "ADMIN_EMAIL, ADMIN_USERNAME and ADMIN_PASSWORD must be defined in server/.env before seeding the admin account."
+      );
+    }
 
-    const adminUsername =
-      process.env.ADMIN_USERNAME || "admin";
-
-    const existingAdmin = await User.findOne({
-      email: adminEmail,
-    });
+    const adminEmail = process.env.ADMIN_EMAIL.toLowerCase();
+    const adminUsername = process.env.ADMIN_USERNAME;
+    const existingAdmin = await User.findOne({ email: adminEmail });
 
     if (existingAdmin) {
-      console.log(
-        `Admin user already exists: ${adminEmail}`
-      );
+      console.log(`Admin user already exists: ${adminEmail}`);
     } else {
-      const hashedPassword = await hashPassword(
-        process.env.ADMIN_PASSWORD || "ChangeMe123!"
-      );
+      const hashedPassword = await hashPassword(process.env.ADMIN_PASSWORD);
 
       await User.create({
         name: "Platform Admin",
@@ -86,9 +75,7 @@ const seedDatabase = async () => {
         isVerified: true,
       });
 
-      console.log(
-        `Created admin user: ${adminEmail}`
-      );
+      console.log(`Created admin user: ${adminEmail}`);
     }
 
     console.log("\nDatabase seeding completed successfully.");
