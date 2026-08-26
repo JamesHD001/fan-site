@@ -1,14 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import '../styles/gifts.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
-
-const formatMoney = (amount, currency = 'USD') =>
-  new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-  }).format(Number(amount || 0) / 100)
+const formatMoney = (amount, currency = 'USD') => new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(Number(amount || 0) / 100)
 
 export default function GiftsPage() {
   const { token, user } = useAuth()
@@ -26,182 +22,73 @@ export default function GiftsPage() {
     const loadData = async () => {
       try {
         const requests = [fetch(`${API_BASE_URL}/gifts`)]
-        if (token) {
-          requests.push(fetch(`${API_BASE_URL}/gifts/history`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }))
-        }
-
+        if (token) requests.push(fetch(`${API_BASE_URL}/gifts/history`, { headers: { Authorization: `Bearer ${token}` } }))
         const [giftsResponse, historyResponse] = await Promise.all(requests)
         const giftsData = await giftsResponse.json()
-
-        if (!cancelled && giftsResponse.ok && giftsData.success) {
-          setGifts(giftsData.data?.gifts || [])
-        }
-
+        if (!cancelled && giftsResponse.ok && giftsData.success) setGifts(giftsData.data?.gifts || [])
         if (historyResponse) {
           const historyData = await historyResponse.json()
-          if (!cancelled && historyResponse.ok && historyData.success) {
-            setHistory(historyData.data?.transactions || [])
-          }
+          if (!cancelled && historyResponse.ok && historyData.success) setHistory(historyData.data?.transactions || [])
         }
-      } catch {
-        if (!cancelled) setError('Unable to load gifts. Please try again.')
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
+      } catch { if (!cancelled) setError('Unable to load gifts. Please try again.') }
+      finally { if (!cancelled) setLoading(false) }
     }
-
     loadData()
     return () => { cancelled = true }
   }, [token])
 
-  const openGiftModal = (gift) => {
-    setSelectedGift(gift)
-    setQuantity(1)
-    setMessage('')
-    setError('')
-  }
-
-  const closeGiftModal = () => {
-    if (!submitting) setSelectedGift(null)
-  }
+  const openGiftModal = (gift) => { setSelectedGift(gift); setQuantity(1); setMessage(''); setError('') }
+  const closeGiftModal = () => { if (!submitting) setSelectedGift(null) }
 
   const handlePurchase = async (event) => {
     event.preventDefault()
     if (!selectedGift || !token) return
-    setSubmitting(true)
-    setError('')
-
+    setSubmitting(true); setError('')
     try {
       const response = await fetch(`${API_BASE_URL}/gifts/initialize`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          giftId: selectedGift._id,
-          quantity,
-          message,
-        }),
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ giftId: selectedGift._id, quantity, message }),
       })
       const data = await response.json()
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Unable to start gift checkout.')
-      }
-
+      if (!response.ok || !data.success) throw new Error(data.message || 'Unable to start gift checkout.')
       window.location.href = data.checkout.authorizationUrl
-    } catch (purchaseError) {
-      setError(purchaseError.message)
-      setSubmitting(false)
-    }
+    } catch (purchaseError) { setError(purchaseError.message); setSubmitting(false) }
   }
 
-  if (loading) {
-    return (
-      <main className="placeholder-page">
-        <h1>Gifts</h1>
-        <p>Loading gifts…</p>
-      </main>
-    )
-  }
+  if (loading) return <main className="gifts-page"><header className="gifts-hero"><div><p className="eyebrow">FAN APPRECIATION</p><h1>Give a little.</h1></div><p>Loading the gift collection…</p></header></main>
 
   return (
     <main className="gifts-page">
-      <header className="page-header">
-        <p className="eyebrow">KEANU REEVES FAN COMMUNITY</p>
-        <h1>Send a gift</h1>
-        <p className="muted">Share a little appreciation with the community.</p>
+      <header className="gifts-hero">
+        <div><p className="eyebrow">FAN APPRECIATION</p><h1>Give a little.</h1></div>
+        <div className="gifts-hero-copy"><p>Send a virtual gift as a simple expression of appreciation. Choose something meaningful, add a personal note, and complete your gift securely through Paystack.</p><Link className="text-link" to="/community">Explore the community <span>→</span></Link></div>
       </header>
 
-      {error && !selectedGift && <p className="auth-error">{error}</p>}
+      {!user && <div className="gift-login"><Link to="/login">Sign in</Link> to send a gift. You can explore the collection without an account.</div>}
+      {error && !selectedGift && <div className="gift-login gift-error">{error}</div>}
 
-      {!user && (
-        <p className="auth-error">
-          <Link to="/login">Sign in</Link> to send a gift.
-        </p>
-      )}
-
-      <section className="gifts-grid" aria-label="Gift catalog">
-        {gifts.map((gift) => (
-          <article className="gift-card" key={gift._id}>
-            <div className="gift-image" aria-hidden="true">
-              {gift.image ? <img src={gift.image} alt="" /> : '🎁'}
-            </div>
-            <div className="gift-card-content">
+      <section className="gift-collection" aria-label="Gift collection">
+        {gifts.map((gift, index) => (
+          <article className={`gift-showcase gift-showcase-${index % 5}`} key={gift._id}>
+            <div className="gift-orbit" aria-hidden="true"><span>{gift.image ? <img src={gift.image} alt="" /> : '✦'}</span></div>
+            <div className="gift-content">
+              <span className="gift-index">GIFT {String(index + 1).padStart(2, '0')}</span>
               <h2>{gift.name}</h2>
               <p className="gift-price">{formatMoney(gift.price, gift.currency)}</p>
-              <p className="card-description">{gift.description}</p>
-              {user && (
-                <button className="primary-button" type="button" onClick={() => openGiftModal(gift)}>
-                  Send this gift
-                </button>
-              )}
+              <p>{gift.description}</p>
+              {user ? <button className="button button-primary" type="button" onClick={() => openGiftModal(gift)}>Send this gift →</button> : <Link className="button button-ghost" to="/login">Sign in to send</Link>}
             </div>
           </article>
         ))}
       </section>
 
-      {gifts.length === 0 && !error && <p>No gifts are available right now.</p>}
+      {gifts.length === 0 && !error && <p className="gift-empty">No gifts are available right now.</p>}
 
-      {user && history.length > 0 && (
-        <section className="gift-history">
-          <h2 className="section-title">Your gift history</h2>
-          <ul className="gift-history-list">
-            {history.map((transaction) => (
-              <li className="gift-history-item" key={transaction._id}>
-                <div>
-                  <strong>{transaction.gift?.name || 'Gift'}</strong>
-                  <span className="muted"> × {transaction.quantity} · {new Date(transaction.createdAt).toLocaleDateString()}</span>
-                </div>
-                <span className={`status-pill gift-status-${transaction.status.toLowerCase()}`}>
-                  {transaction.status.replace('_', ' ')}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      {user && history.length > 0 && <section className="gift-history"><p className="eyebrow">YOUR APPRECIATION</p><h2>Gift history</h2><ul>{history.map((transaction) => <li key={transaction._id}><div><strong>{transaction.gift?.name || 'Gift'}</strong><span> × {transaction.quantity} · {new Date(transaction.createdAt).toLocaleDateString()}</span></div><b>{transaction.status.replace('_', ' ')}</b></li>)}</ul></section>}
 
-      {selectedGift && (
-        <form className="modal-backdrop" onSubmit={handlePurchase}>
-          <div className="modal-card gift-modal" role="dialog" aria-modal="true" aria-labelledby="gift-dialog-title">
-            <h2 id="gift-dialog-title">Send {selectedGift.name}</h2>
-            <p className="muted">{formatMoney(selectedGift.price, selectedGift.currency)} each</p>
-            <label>
-              Quantity
-              <input
-                type="number"
-                min="1"
-                max="100"
-                required
-                value={quantity}
-                onChange={(event) => setQuantity(Math.max(1, Math.min(100, Number(event.target.value) || 1)))}
-              />
-            </label>
-            <label>
-              Message (optional)
-              <textarea rows={4} maxLength={500} placeholder="Add a message of appreciation…" value={message} onChange={(event) => setMessage(event.target.value)} />
-            </label>
-            <p className="gift-total">
-              Total: <strong>{formatMoney(selectedGift.price * quantity, selectedGift.currency)}</strong>
-            </p>
-            {error && <p className="auth-error">{error}</p>}
-            <div className="payment-actions">
-              <button className="primary-button" type="submit" disabled={submitting}>
-                {submitting ? 'Redirecting to Paystack…' : 'Continue to payment'}
-              </button>
-              <button className="secondary-button" type="button" disabled={submitting} onClick={closeGiftModal}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </form>
-      )}
+      <section className="gifts-note section-shell"><div><p className="eyebrow">A SMALL GESTURE</p><h2>Make the moment personal.</h2></div><p>Every gift can carry your own message. Whether it is a celebration, a thank-you, or simply a sign of support, the note makes the experience yours.</p></section>
 
-      <p className="muted back-link"><Link to="/">← Back to home</Link></p>
+      {selectedGift && <form className="gift-modal-backdrop" onSubmit={handlePurchase}><div className="gift-modal" role="dialog" aria-modal="true" aria-labelledby="gift-dialog-title"><p className="eyebrow">SEND A GIFT</p><h2 id="gift-dialog-title">{selectedGift.name}</h2><p className="gift-modal-price">{formatMoney(selectedGift.price, selectedGift.currency)} each</p><label>Quantity<input type="number" min="1" max="100" required value={quantity} onChange={(event) => setQuantity(Math.max(1, Math.min(100, Number(event.target.value) || 1)))} /></label><label>Message (optional)<textarea rows="4" maxLength="500" placeholder="Add a message of appreciation…" value={message} onChange={(event) => setMessage(event.target.value)} /></label><p className="gift-total">Total <strong>{formatMoney(selectedGift.price * quantity, selectedGift.currency)}</strong></p>{error && <p className="gift-error">{error}</p>}<div className="gift-modal-actions"><button className="button button-primary" type="submit" disabled={submitting}>{submitting ? 'Redirecting to Paystack…' : 'Continue to payment'}</button><button className="button button-ghost" type="button" disabled={submitting} onClick={closeGiftModal}>Cancel</button></div></div></form>}
     </main>
   )
 }
