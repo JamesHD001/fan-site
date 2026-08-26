@@ -1,116 +1,20 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 export default function AuthPage({ mode = 'login' }) {
-  const isLogin = mode === 'login'
-  const navigate = useNavigate()
-  const location = useLocation()
-  const { login, isAuthenticated } = useAuth()
-
-  const [form, setForm] = useState({ name: '', username: '', email: '', password: '' })
-  const [error, setError] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-
+  const isLogin = mode === 'login'; const navigate = useNavigate(); const location = useLocation(); const { login, isAuthenticated } = useAuth()
+  const [form, setForm] = useState({ name: '', username: '', email: '', password: '' }); const [otp, setOtp] = useState(''); const [step, setStep] = useState('form'); const [error, setError] = useState(''); const [submitting, setSubmitting] = useState(false); const [resending, setResending] = useState(false)
   const redirectTo = location.state?.from || '/'
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate(redirectTo, { replace: true })
-    }
-  }, [isAuthenticated, navigate, redirectTo])
-
-  const handleChange = (event) => {
-    setForm((current) => ({ ...current, [event.target.name]: event.target.value }))
-  }
-
-  const handleSubmit = async (event) => {
-    event.preventDefault()
-    setError('')
-    setSubmitting(true)
-
-    try {
-      const endpoint = isLogin ? '/auth/login' : '/auth/register'
-      const body = isLogin
-        ? { email: form.email, password: form.password }
-        : form
-
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Authentication failed.')
-      }
-
-      login(data.token, data.user)
-      navigate(redirectTo, { replace: true })
-    } catch (requestError) {
-      setError(requestError.message)
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  if (isAuthenticated) {
-    return <main className="placeholder-page"><p>Redirecting…</p></main>
-  }
-
-  return (
-    <main className="auth-page">
-      <section className="auth-card">
-        <p className="eyebrow">KEANU REEVES FAN COMMUNITY</p>
-        <h1>{isLogin ? 'Welcome back' : 'Join the community'}</h1>
-        <p className="auth-intro">
-          {isLogin
-            ? 'Sign in to continue to your fan community experience.'
-            : 'Create your fan account to access memberships, meetings and gifts.'}
-        </p>
-
-        {error && <div className="auth-error" role="alert">{error}</div>}
-
-        <form onSubmit={handleSubmit} className="auth-form">
-          {!isLogin && (
-            <>
-              <label>
-                Full name
-                <input name="name" value={form.name} onChange={handleChange} required autoComplete="name" />
-              </label>
-              <label>
-                Username
-                <input name="username" value={form.username} onChange={handleChange} required autoComplete="username" />
-              </label>
-            </>
-          )}
-
-          <label>
-            Email
-            <input type="email" name="email" value={form.email} onChange={handleChange} required autoComplete="email" />
-          </label>
-
-          <label>
-            Password
-            <input type="password" name="password" value={form.password} onChange={handleChange} required minLength={8} autoComplete={isLogin ? 'current-password' : 'new-password'} />
-          </label>
-
-          <button className="primary-button auth-submit" type="submit" disabled={submitting}>
-            {submitting ? 'Please wait…' : isLogin ? 'Sign In' : 'Create Account'}
-          </button>
-        </form>
-
-        <p className="auth-switch">
-          {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
-          <button type="button" onClick={() => navigate(isLogin ? '/register' : '/login', { state: { from: redirectTo } })}>
-            {isLogin ? 'Create one' : 'Sign in'}
-          </button>
-        </p>
-      </section>
-    </main>
-  )
+  useEffect(() => { if (isAuthenticated) navigate(redirectTo, { replace: true }) }, [isAuthenticated, navigate, redirectTo])
+  const handleChange = (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.value }))
+  const requestRegistrationOtp = async () => { const response = await fetch(`${API_BASE_URL}/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) }); const data = await response.json(); if (!response.ok || !data.success) throw new Error(data.message || 'Unable to start registration.'); setStep('otp') }
+  const verifyRegistrationOtp = async () => { const response = await fetch(`${API_BASE_URL}/auth/register/verify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, otp }) }); const data = await response.json(); if (!response.ok || !data.success) throw new Error(data.message || 'Unable to verify your email.'); login(data.token, data.user); navigate(redirectTo, { replace: true }) }
+  const resendOtp = async () => { setResending(true); setError(''); try { const response = await fetch(`${API_BASE_URL}/otp/request`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: form.email, purpose: 'REGISTRATION' }) }); const data = await response.json(); if (!response.ok || !data.success) throw new Error(data.message || 'Unable to resend OTP.') } catch (e) { setError(e.message) } finally { setResending(false) } }
+  const handleSubmit = async (event) => { event.preventDefault(); setError(''); setSubmitting(true); try { if (isLogin) { const response = await fetch(`${API_BASE_URL}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: form.email, password: form.password }) }); const data = await response.json(); if (!response.ok || !data.success) throw new Error(data.message || 'Authentication failed.'); login(data.token, data.user); navigate(redirectTo, { replace: true }) } else if (step === 'form') await requestRegistrationOtp(); else await verifyRegistrationOtp() } catch (e) { setError(e.message) } finally { setSubmitting(false) } }
+  if (isAuthenticated) return <main className="placeholder-page"><p>Redirecting…</p></main>
+  return <main className="auth-page"><section className="auth-card"><p className="eyebrow">KEANU REEVES FAN COMMUNITY</p><h1>{isLogin ? 'Welcome back' : step === 'otp' ? 'Verify your email' : 'Join the community'}</h1><p className="auth-intro">{isLogin ? 'Sign in to continue to your fan community experience.' : step === 'otp' ? `Enter the 6-digit code sent to ${form.email}.` : 'Create your fan account to access memberships, meetings and gifts.'}</p>{error && <div className="auth-error" role="alert">{error}</div>}
+    {step === 'otp' && !isLogin ? <form onSubmit={handleSubmit} className="auth-form"><label>Verification code<input inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} required autoComplete="one-time-code" /></label><button className="primary-button auth-submit" type="submit" disabled={submitting || otp.length !== 6}>{submitting ? 'Verifying…' : 'Verify & Create Account'}</button><button className="auth-resend" type="button" onClick={resendOtp} disabled={resending}>{resending ? 'Sending…' : 'Resend code'}</button></form> : <form onSubmit={handleSubmit} className="auth-form">{!isLogin && <><label>Full name<input name="name" value={form.name} onChange={handleChange} required autoComplete="name" /></label><label>Username<input name="username" value={form.username} onChange={handleChange} required autoComplete="username" /></label></>}<label>Email<input type="email" name="email" value={form.email} onChange={handleChange} required autoComplete="email" /></label><label>Password<input type="password" name="password" value={form.password} onChange={handleChange} required minLength={8} autoComplete={isLogin ? 'current-password' : 'new-password'} /></label><button className="primary-button auth-submit" type="submit" disabled={submitting}>{submitting ? 'Please wait…' : isLogin ? 'Sign In' : 'Continue'}</button></form>}
+    <p className="auth-switch">{isLogin ? "Don't have an account?" : 'Already have an account?'} <button type="button" onClick={() => navigate(isLogin ? '/register' : '/login', { state: { from: redirectTo } })}>{isLogin ? 'Create one' : 'Sign in'}</button></p></section></main>
 }
