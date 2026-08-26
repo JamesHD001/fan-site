@@ -32,6 +32,7 @@ const bookingSchema = new mongoose.Schema(
     scheduledFor: {
       type: Date,
       required: true,
+      index: true,
     },
 
     status: {
@@ -81,7 +82,16 @@ const bookingSchema = new mongoose.Schema(
   }
 );
 
-// Prevent double-booking the same slot
-bookingSchema.index({ scheduledFor: 1 });
+// Only paid/active bookings reserve a slot. Cancelled and declined bookings
+// must not block the slot for future customers.
+bookingSchema.index(
+  { scheduledFor: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      status: { $in: ["PENDING_PAYMENT", "CONFIRMED", "COMPLETED"] },
+    },
+  }
+);
 
 module.exports = mongoose.model("Booking", bookingSchema);
