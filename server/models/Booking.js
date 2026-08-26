@@ -32,7 +32,6 @@ const bookingSchema = new mongoose.Schema(
     scheduledFor: {
       type: Date,
       required: true,
-      index: true,
     },
 
     status: {
@@ -87,6 +86,7 @@ const bookingSchema = new mongoose.Schema(
 bookingSchema.index(
   { scheduledFor: 1 },
   {
+    name: "active_booking_slot_unique",
     unique: true,
     partialFilterExpression: {
       status: { $in: ["PENDING_PAYMENT", "CONFIRMED", "COMPLETED"] },
