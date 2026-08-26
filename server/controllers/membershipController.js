@@ -12,7 +12,10 @@ const {
 const {
   expireMembershipIfNecessary,
 } = require("../services/membershipService");
-const { convertUsdToNgn } = require("../services/paymentService");
+const {
+  convertUsdToNgn,
+  isValidPaystackAmount,
+} = require("../services/paymentService");
 const { notifyMembershipActivated } = require("../services/notificationService");
 
 const {
@@ -106,17 +109,22 @@ const verifyMembershipPayment = async (req, res) => {
       });
     }
 
-    // Paystack already returns the transaction amount in minor units.
-    if (Number(transaction.amount) !== payment.amount) {
+    if (!isValidPaystackAmount(Number(payment.amount), Number(transaction.amount))) {
       return res.status(400).json({
         success: false,
         message: "Payment amount mismatch.",
+        details: {
+          expectedAmount: Number(payment.amount),
+          receivedAmount: Number(transaction.amount),
+          currency: transaction.currency || payment.currency,
+        },
       });
     }
 
     if (
+      !transaction.currency ||
       transaction.currency.toUpperCase() !==
-      payment.currency.toUpperCase()
+        payment.currency.toUpperCase()
     ) {
       return res.status(400).json({
         success: false,
