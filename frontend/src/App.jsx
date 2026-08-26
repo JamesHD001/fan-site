@@ -61,14 +61,7 @@ function PaymentCallback() {
 
     const verifyPayment = async () => {
       try {
-        const paymentType = localStorage.getItem('pendingPaymentType') || 'MEMBERSHIP'
-        const verifyPaths = {
-          MEMBERSHIP: '/memberships/verify',
-          MEETING: '/meetings/bookings/verify',
-          GIFT: '/gifts/verify',
-        }
-        const type = verifyPaths[paymentType] ? paymentType : 'MEMBERSHIP'
-        const response = await fetch(`${API_BASE_URL}${verifyPaths[type]}`, {
+        const response = await fetch(`${API_BASE_URL}/payments/verify`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -80,19 +73,22 @@ function PaymentCallback() {
         const data = await response.json()
 
         if (cancelled) return
-        if (!response.ok || !data.success) throw new Error(data.message || 'We could not verify this payment.')
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || 'We could not verify this payment.')
+        }
 
-        localStorage.removeItem('pendingPaymentType')
         setState({
           status: 'success',
-          type,
-          message: data.message || `${type} payment verified successfully.`,
+          type: data.type || '',
+          message: data.message || 'Payment verified successfully.',
           membership: data.membership || null,
           booking: data.booking || null,
           transaction: data.transaction || null,
         })
       } catch (error) {
-        if (!cancelled) setState({ status: 'error', message: error.message, type: '', membership: null, booking: null, transaction: null })
+        if (!cancelled) {
+          setState({ status: 'error', message: error.message, type: '', membership: null, booking: null, transaction: null })
+        }
       }
     }
 
@@ -100,8 +96,12 @@ function PaymentCallback() {
     return () => { cancelled = true }
   }, [authLoading, isAuthenticated, navigate, searchParams, token])
 
-  if (authLoading || (state.status === 'loading' && !isAuthenticated)) {
+  if (authLoading) {
     return <main className="payment-page"><div className="payment-card"><div className="payment-icon spinner" /><p className="eyebrow">KEANU REEVES FAN COMMUNITY</p><h1>Checking your account</h1><p>Preparing secure payment verification…</p></div></main>
+  }
+
+  if (!isAuthenticated) {
+    return <main className="payment-page"><div className="payment-card"><div className="payment-icon spinner" /><p className="eyebrow">SECURE PAYMENT</p><h1>Sign in required</h1><p>Redirecting you to sign in so we can verify the payment securely.</p></div></main>
   }
 
   if (state.status === 'loading') {
@@ -112,7 +112,7 @@ function PaymentCallback() {
     const destination = state.type === 'MEMBERSHIP' ? '/membership' : state.type === 'MEETING' ? '/meetings' : '/gifts'
     const destinationLabel = state.type === 'MEMBERSHIP' ? 'View Membership' : state.type === 'MEETING' ? 'View Bookings' : 'View Gift History'
     const detail = state.membership
-      ? [['Membership', state.membership.plan || state.membership.name || 'Fan Membership'], ['Status', state.membership.status || 'ACTIVE']]
+      ? [['Membership', state.membership.plan?.name || state.membership.plan || 'Fan Membership'], ['Status', state.membership.status || 'ACTIVE']]
       : state.booking
         ? [['Meeting', state.booking.meetingType?.name || 'Meeting'], ['Status', state.booking.status || 'CONFIRMED']]
         : state.transaction
