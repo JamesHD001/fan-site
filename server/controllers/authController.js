@@ -15,7 +15,12 @@ const register = async (req, res) => {
     if (existingUser) return res.status(409).json({ success: false, message: "Email or username is already registered." });
     await createOtp({ email: normalizedEmail, purpose: "REGISTRATION" });
     return res.status(202).json({ success: true, requiresOtp: true, message: "A verification code has been sent to your email address.", email: normalizedEmail });
-  } catch (error) { console.error("Registration OTP error:", error); return res.status(error.code === "OTP_COOLDOWN" || error.code === "OTP_RESEND_LIMIT" ? 429 : 500).json({ success: false, message: error.message || "Unable to start registration verification." }); }
+  } catch (error) {
+    console.error("Registration OTP error:", error);
+    if (error.code === "OTP_COOLDOWN" || error.code === "OTP_RESEND_LIMIT") return res.status(429).json({ success: false, message: error.message });
+    if (error.code === "EMAIL_NOT_CONFIGURED" || error.code === "EMAIL_DELIVERY_FAILED") return res.status(503).json({ success: false, message: "Email delivery is currently unavailable. Please try again later." });
+    return res.status(500).json({ success: false, message: "Unable to start registration verification." });
+  }
 };
 
 const verifyRegistration = async (req, res) => {
