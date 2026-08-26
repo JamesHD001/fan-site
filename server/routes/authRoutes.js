@@ -1,5 +1,4 @@
 const express = require("express");
-
 const {
   register,
   login,
@@ -7,7 +6,6 @@ const {
 } = require("../controllers/authController");
 
 const authenticate = require("../middleware/authenticate");
-
 const validate = require("../middleware/validate");
 
 const {
@@ -16,6 +14,23 @@ const {
 } = require("../validators/authValidator");
 
 const router = express.Router();
+
+const { authLimiter } = require("../middleware/rateLimiters");
+
+router.post("/register",
+  authLimiter,
+  registerValidator,
+  validate,
+  register
+);
+
+router.post(
+  "/login", 
+  authLimiter, 
+  loginValidator, 
+  validate, 
+  login
+);
 
 router.post(
   "/register",

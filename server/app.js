@@ -16,7 +16,7 @@ const notificationRoutes = require("./routes/notificationRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const eventRoutes = require("./routes/eventRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
-
+const errorHandler = require("./middleware/errorHandler");
 const app = express();
 
 app.use(helmet());
@@ -50,6 +50,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/analytics", analyticsRoutes);
+app.use(errorHandler);
 
 app.get("/api/health", (req, res) => {
   res.status(200).json({
