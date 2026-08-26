@@ -35,7 +35,7 @@ export default function MembershipPage() {
             setMembershipCard(null)
           }
 
-          if (token && membershipData.success && membershipData.membership?.status === 'ACTIVE') {
+          if (membershipData.success && membershipData.membership?.status === 'ACTIVE') {
             const cardResponse = await fetch(`${API_BASE_URL}/memberships/card`, { headers: { Authorization: `Bearer ${token}` } })
             const cardData = await cardResponse.json()
             if (!cancelled && cardResponse.ok && cardData.success) setMembershipCard(cardData.card)
@@ -116,14 +116,10 @@ export default function MembershipPage() {
             <div className="membership-expiring-notice" role="status"><div><b>Your membership expires soon.</b><span>Renew now to keep uninterrupted access to your community benefits.</span></div><button className="button button-primary" onClick={() => document.getElementById('membership-plans')?.scrollIntoView({ behavior: 'smooth' })}>Renew now</button></div>
           )}
 
-<<<<<<< HEAD
           <div className="member-card-showcase">
             <div className="member-card-copy"><span className="eyebrow">YOUR DIGITAL MEMBERSHIP CARD</span><h2>A place that<br /><em>belongs to you.</em></h2><p>Your activated membership is represented by a digital card generated from your account. Your tier, member number, dates and status come directly from your membership record.</p></div>
             <MembershipCard card={membershipCard} onPrint={handlePrintCard} />
           </div>
-=======
-          <div className="member-card-showcase"><div className="member-card-copy"><span className="eyebrow">YOUR DIGITAL MEMBERSHIP CARD</span><h2>A place that<br /><em>belongs to you.</em></h2><p>Your activated membership is represented by a digital card generated from your account. Your tier, member number, dates and status come directly from the membership record.</p></div><MembershipCard card={membershipCard} onPrint={handlePrintCard} /></div>
->>>>>>> 46d13f82a1165a4c076ad6529f91b50c07c251eb
         </section>
       )}
 
