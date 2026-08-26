@@ -18,6 +18,10 @@ const initializeTransaction = async ({
     throw new Error("PAYSTACK_SECRET_KEY is not configured.");
   }
 
+  if (!Number.isInteger(Number(amount)) || Number(amount) < 0) {
+    throw new Error("Paystack amount must be a non-negative integer subunit amount.");
+  }
+
   const response = await fetch(
     `${PAYSTACK_BASE_URL}/transaction/initialize`,
     {
@@ -25,7 +29,7 @@ const initializeTransaction = async ({
       headers: getHeaders(),
       body: JSON.stringify({
         email,
-        amount,
+        amount: String(Number(amount)),
         currency,
         reference,
         metadata,
