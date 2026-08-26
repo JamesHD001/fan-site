@@ -303,6 +303,7 @@ const getMembershipCard = async (req, res) => {
         membershipType: membership.plan.name,
         badge: membership.plan.badge,
         cardDesign: membership.plan.cardDesign,
+        benefits: membership.plan.benefits || [],
         startedAt: membership.startedAt,
         expiresAt: membership.expiresAt,
         status: membership.status,
