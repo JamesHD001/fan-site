@@ -1,5 +1,5 @@
 const express = require("express");
-const { getDashboardStats, getUsers, updateUser, setUserActiveStatus, getPayments, getBookings, updateBookingStatus, getPendingPosts, moderatePost } = require("../controllers/adminController");
+const { getDashboardStats, getUsers, updateUser, setUserActiveStatus, getPayments, getBookings, updateBookingStatus, getPendingPosts, moderatePost, sendAnnouncement } = require("../controllers/adminController");
 const authenticate = require("../middleware/authenticate");
 const requireAdmin = require("../middleware/adminMiddleware");
 const router = express.Router();
@@ -13,4 +13,5 @@ router.get("/bookings", getBookings);
 router.patch("/bookings/:id/status", updateBookingStatus);
 router.get("/posts/pending", getPendingPosts);
 router.patch("/posts/:id/moderate", moderatePost);
+router.post("/announcements", sendAnnouncement);
 module.exports = router;
