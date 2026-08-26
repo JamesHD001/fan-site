@@ -93,10 +93,31 @@ const verifyPayment = async (req, res) => {
       });
     }
 
-    if (Number(transaction.amount) !== Number(payment.amount)) {
+    const expectedAmount = Number(payment.amount);
+    const receivedAmount = Number(transaction.amount);
+
+    if (
+      !Number.isInteger(expectedAmount) ||
+      !Number.isInteger(receivedAmount) ||
+      receivedAmount !== expectedAmount
+    ) {
+      console.error("Paystack payment amount mismatch", {
+        reference,
+        expectedAmount,
+        receivedAmount,
+        paymentCurrency: payment.currency,
+        transactionCurrency: transaction.currency,
+        paymentId: payment._id.toString(),
+      });
+
       return res.status(400).json({
         success: false,
         message: "Payment amount mismatch.",
+        details: {
+          expectedAmount,
+          receivedAmount,
+          currency: transaction.currency || payment.currency,
+        },
       });
     }
 
