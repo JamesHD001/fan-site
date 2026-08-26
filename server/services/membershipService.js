@@ -1,4 +1,5 @@
 const Membership = require("../models/Membership");
+const { createNotification } = require("./notificationService");
 
 const expireMembershipIfNecessary = async (membership) => {
   if (!membership) return null;
@@ -11,6 +12,14 @@ const expireMembershipIfNecessary = async (membership) => {
     membership.status = "EXPIRED";
     membership.autoRenew = false;
     await membership.save();
+
+    await createNotification({
+      userId: membership.user.toString(),
+      type: "MEMBERSHIP",
+      title: "Membership expired",
+      message: "Your membership has expired. Renew your membership to restore your community access.",
+      link: "/membership",
+    });
   }
 
   return membership;
