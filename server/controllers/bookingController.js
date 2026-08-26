@@ -1,15 +1,18 @@
+const mongoose = require("mongoose");
 const Booking = require("../models/Booking");
 const Payment = require("../models/Payment");
 
 const { verifyTransaction } = require("../services/paystackService");
+const { settleSuccessfulPayment } = require("../services/paymentSettlementService");
 const { notifyBookingConfirmed } = require("../services/notificationService");
-const { toSubunit } = require("../utils/currency");
 
 /*
  * Authenticated: verify a booking payment by reference.
- * Mirrors the membership verification flow.
+ * Paystack amounts are already returned in minor units, matching Payment.amount.
  */
 const verifyBookingPayment = async (req, res) => {
+  let session;
+
   try {
     const { reference } = req.body;
 
@@ -33,11 +36,8 @@ const verifyBookingPayment = async (req, res) => {
       });
     }
 
-    // Idempotency
     if (payment.status === "SUCCESS") {
-      const booking = await Booking.findById(
-        payment.booking
-      ).populate("meetingType");
+      const booking = await Booking.findById(payment.booking).populate("meetingType");
 
       return res.status(200).json({
         success: true,
@@ -47,9 +47,7 @@ const verifyBookingPayment = async (req, res) => {
       });
     }
 
-    const paystackResponse =
-      await verifyTransaction(reference);
-
+    const paystackResponse = await verifyTransaction(reference);
     const transaction = paystackResponse.data;
 
     if (transaction.reference !== payment.reference) {
@@ -59,12 +57,7 @@ const verifyBookingPayment = async (req, res) => {
       });
     }
 
-    const expectedAmount = toSubunit(
-      payment.amount,
-      payment.currency
-    );
-
-    if (Number(transaction.amount) !== expectedAmount) {
+    if (Number(transaction.amount) !== Number(payment.amount)) {
       return res.status(400).json({
         success: false,
         message: "Payment amount mismatch.",
@@ -72,8 +65,8 @@ const verifyBookingPayment = async (req, res) => {
     }
 
     if (
-      transaction.currency.toUpperCase() !==
-      payment.currency.toUpperCase()
+      !transaction.currency ||
+      transaction.currency.toUpperCase() !== payment.currency.toUpperCase()
     ) {
       return res.status(400).json({
         success: false,
@@ -83,12 +76,8 @@ const verifyBookingPayment = async (req, res) => {
 
     if (transaction.status !== "success") {
       payment.status =
-        transaction.status === "abandoned"
-          ? "ABANDONED"
-          : "FAILED";
-
+        transaction.status === "abandoned" ? "ABANDONED" : "FAILED";
       payment.providerResponse = transaction;
-
       await payment.save();
 
       return res.status(400).json({
@@ -98,59 +87,50 @@ const verifyBookingPayment = async (req, res) => {
       });
     }
 
-    const booking = await Booking.findById(
-      payment.booking
-    );
+    session = await mongoose.startSession();
+    session.startTransaction();
 
-    if (!booking) {
-      return res.status(404).json({
-        success: false,
-        message: "Booking record not found.",
-      });
+    const settlement = await settleSuccessfulPayment({
+      paymentId: payment._id,
+      transaction,
+      session,
+    });
+
+    await session.commitTransaction();
+
+    if (!settlement.alreadySettled && settlement.notification) {
+      await notifyBookingConfirmed(
+        settlement.notification.userId,
+        settlement.notification.reference,
+        settlement.notification.scheduledFor
+      );
     }
 
-    if (booking.status !== "CONFIRMED") {
-      booking.status = "CONFIRMED";
-      booking.confirmedAt = new Date();
-      await booking.save();
-    }
-
-    payment.status = "SUCCESS";
-    payment.paidAt = transaction.paid_at
-      ? new Date(transaction.paid_at)
-      : new Date();
-    payment.providerTransactionId =
-      String(transaction.id);
-    payment.providerResponse = transaction;
-
-    await payment.save();
-
-    await notifyBookingConfirmed(
-      req.user._id.toString(),
-      booking.reference,
-      booking.scheduledFor
-    );
-
-    await booking.populate(
-      "meetingType",
-      "name duration price currency"
-    );
+    const booking = settlement.result.booking;
 
     return res.status(200).json({
       success: true,
-      message:
-        "Payment verified and booking confirmed successfully.",
+      message: settlement.alreadySettled
+        ? "Payment has already been verified."
+        : "Payment verified and booking confirmed successfully.",
+      payment: settlement.payment,
       booking,
     });
   } catch (error) {
+    if (session?.inTransaction()) {
+      await session.abortTransaction();
+    }
+
     console.error("Verify booking payment error:", error);
 
     return res.status(500).json({
       success: false,
-      message:
-        error.message ||
-        "Unable to verify booking payment.",
+      message: error.message || "Unable to verify booking payment.",
     });
+  } finally {
+    if (session) {
+      await session.endSession();
+    }
   }
 };
 
@@ -171,11 +151,7 @@ const cancelBooking = async (req, res) => {
       });
     }
 
-    if (
-      !["PENDING_PAYMENT", "CONFIRMED"].includes(
-        booking.status
-      )
-    ) {
+    if (!["PENDING_PAYMENT", "CONFIRMED"].includes(booking.status)) {
       return res.status(400).json({
         success: false,
         message: `A ${booking.status.toLowerCase()} booking cannot be cancelled.`,
