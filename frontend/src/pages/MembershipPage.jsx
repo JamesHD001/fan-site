@@ -117,7 +117,7 @@ export default function MembershipPage() {
           )}
 
           <div className="member-card-showcase">
-            <div className="member-card-copy"><span className="eyebrow">YOUR DIGITAL MEMBERSHIP CARD</span><h2>A place that<br /><em>belongs to you.</em></h2><p>Your activated membership is represented by a digital card generated from your account. Your tier, member number, dates and status come directly from the membership record.</p></div>
+            <div className="member-card-copy"><span className="eyebrow">YOUR DIGITAL MEMBERSHIP CARD</span><h2>A place that<br /><em>belongs to you.</em></h2><p>Your activated membership is represented by a digital card generated from your account. Your tier, member number, dates and status come directly from your membership record.</p></div>
             <MembershipCard card={membershipCard} onPrint={handlePrintCard} />
           </div>
         </section>
