@@ -4,12 +4,14 @@ import { useAuth } from '../context/AuthContext'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
-// Module-scope helper so the impure Date.now() call
-// never happens during component render.
 const getMinBookingDateTime = () =>
-  new Date(Date.now() + 60 * 60 * 1000)
-    .toISOString()
-    .slice(0, 16)
+  new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)
+
+const formatMinorCurrency = (amount, currency = 'USD') =>
+  new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+  }).format(Number(amount || 0) / 100)
 
 export default function MeetingsPage() {
   const { token, user } = useAuth()
@@ -27,9 +29,7 @@ export default function MeetingsPage() {
     let cancelled = false
     const loadData = async () => {
       try {
-        const requests = [
-          fetch(`${API_BASE_URL}/meetings/types`),
-        ]
+        const requests = [fetch(`${API_BASE_URL}/meetings/types`)]
 
         if (token) {
           requests.push(
@@ -54,25 +54,18 @@ export default function MeetingsPage() {
           }
         }
       } catch {
-        if (!cancelled) {
-          setBookingError('Unable to load meetings. Please try again.')
-        }
+        if (!cancelled) setBookingError('Unable to load meetings. Please try again.')
       } finally {
         if (!cancelled) setLoading(false)
       }
     }
 
     loadData()
-
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [token])
 
   const openBooking = (type) => {
     setSelectedType(type)
-    // Minimum selectable datetime is 1 hour from now,
-    // computed in this event handler via a module helper.
     setMinDateTime(getMinBookingDateTime())
     setScheduledFor('')
     setNotes('')
@@ -106,7 +99,6 @@ export default function MeetingsPage() {
         throw new Error(data.message || 'Unable to start booking checkout.')
       }
 
-      localStorage.setItem('pendingPaymentType', 'MEETING')
       window.location.href = data.checkout.authorizationUrl
     } catch (err) {
       setBookingError(err.message)
@@ -128,9 +120,7 @@ export default function MeetingsPage() {
       <header className="page-header">
         <p className="eyebrow">KEANU REEVES FAN COMMUNITY</p>
         <h1>Meetings</h1>
-        <p className="muted">
-          Book a personal session. Some experiences require a higher membership tier.
-        </p>
+        <p className="muted">Book a personal session. Some experiences require a higher membership tier.</p>
       </header>
 
       {!user && (
@@ -145,19 +135,12 @@ export default function MeetingsPage() {
             <span className="card-badge">{type.minimumMembershipTier}</span>
             <h2>{type.name}</h2>
             <p className="card-price">
-              {new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: type.currency || 'USD',
-              }).format(type.price)}
+              {formatMinorCurrency(type.price, type.currency || 'USD')}
               <span> · {type.duration} min</span>
             </p>
             <p className="card-description">{type.description}</p>
             {user ? (
-              <button
-                className="primary-button"
-                type="button"
-                onClick={() => openBooking(type)}
-              >
+              <button className="primary-button" type="button" onClick={() => openBooking(type)}>
                 Book this session
               </button>
             ) : null}
@@ -171,35 +154,18 @@ export default function MeetingsPage() {
             <h2>Book: {selectedType.name}</h2>
             <label>
               Preferred date &amp; time
-              <input
-                type="datetime-local"
-                required
-                min={minDateTime}
-                value={scheduledFor}
-                onChange={(e) => setScheduledFor(e.target.value)}
-              />
+              <input type="datetime-local" required min={minDateTime} value={scheduledFor} onChange={(e) => setScheduledFor(e.target.value)} />
             </label>
             <label>
               Notes (optional)
-              <textarea
-                rows={3}
-                maxLength={1000}
-                placeholder="Anything you'd like to mention?"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
+              <textarea rows={3} maxLength={1000} placeholder="Anything you'd like to mention?" value={notes} onChange={(e) => setNotes(e.target.value)} />
             </label>
             {bookingError && <p className="auth-error">{bookingError}</p>}
             <div className="payment-actions">
               <button className="primary-button" type="submit" disabled={submitting}>
                 {submitting ? 'Redirecting to Paystack…' : 'Continue to payment'}
               </button>
-              <button
-                className="secondary-button"
-                type="button"
-                disabled={submitting}
-                onClick={() => setSelectedType(null)}
-              >
+              <button className="secondary-button" type="button" disabled={submitting} onClick={() => setSelectedType(null)}>
                 Cancel
               </button>
             </div>
@@ -215,10 +181,7 @@ export default function MeetingsPage() {
               <li key={booking._id} className={`booking-item status-${booking.status.toLowerCase()}`}>
                 <div>
                   <strong>{booking.meetingType?.name || 'Meeting'}</strong>
-                  <span className="muted">
-                    {' '}
-                    · {new Date(booking.scheduledFor).toLocaleString()}
-                  </span>
+                  <span className="muted"> · {new Date(booking.scheduledFor).toLocaleString()}</span>
                 </div>
                 <span className="status-pill">{booking.status.replace('_', ' ')}</span>
               </li>
@@ -227,9 +190,7 @@ export default function MeetingsPage() {
         </>
       )}
 
-      <p className="muted back-link">
-        <Link to="/">← Back to home</Link>
-      </p>
+      <p className="muted back-link"><Link to="/">← Back to home</Link></p>
     </main>
   )
 }
