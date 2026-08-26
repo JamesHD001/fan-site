@@ -12,22 +12,46 @@ export default function MembershipPage() {
   const { token, user } = useAuth()
   const [plans, setPlans] = useState([])
   const [membership, setMembership] = useState(null)
+  const [membershipCard, setMembershipCard] = useState(null)
   const [loading, setLoading] = useState(true)
   const [purchasing, setPurchasing] = useState(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
     let cancelled = false
+
     const loadData = async () => {
       try {
         const plansResponse = await fetch(`${API_BASE_URL}/memberships/plans`)
         const plansData = await plansResponse.json()
-        if (!cancelled && plansResponse.ok && plansData.success) setPlans(plansData.plans || [])
+
+        if (!cancelled && plansResponse.ok && plansData.success) {
+          setPlans(plansData.plans || [])
+        }
+
         if (token) {
-          const membershipResponse = await fetch(`${API_BASE_URL}/memberships/me`, { headers: { Authorization: `Bearer ${token}` } })
+          const membershipResponse = await fetch(`${API_BASE_URL}/memberships/me`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
           const membershipData = await membershipResponse.json()
-          if (!cancelled && membershipResponse.ok && membershipData.success) setMembership(membershipData.membership)
-          else if (!cancelled) setMembership(null)
+
+          if (!cancelled && membershipResponse.ok && membershipData.success) {
+            setMembership(membershipData.membership)
+
+            const cardResponse = await fetch(`${API_BASE_URL}/memberships/card`, {
+              headers: { Authorization: `Bearer ${token}` },
+            })
+            const cardData = await cardResponse.json()
+
+            if (!cancelled && cardResponse.ok && cardData.success) {
+              setMembershipCard(cardData.card)
+            } else if (!cancelled) {
+              setMembershipCard(null)
+            }
+          } else if (!cancelled) {
+            setMembership(null)
+            setMembershipCard(null)
+          }
         }
       } catch {
         if (!cancelled) setError('Unable to load membership information. Please try again.')
@@ -35,6 +59,7 @@ export default function MembershipPage() {
         if (!cancelled) setLoading(false)
       }
     }
+
     loadData()
     return () => { cancelled = true }
   }, [token])
@@ -42,14 +67,22 @@ export default function MembershipPage() {
   const handlePurchase = async (planId) => {
     setError('')
     setPurchasing(planId)
+
     try {
       const response = await fetch(`${API_BASE_URL}/memberships/initialize`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ planId }),
       })
       const data = await response.json()
-      if (!response.ok || !data.success) throw new Error(data.message || 'Unable to start checkout.')
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Unable to start checkout.')
+      }
+
       localStorage.setItem('pendingPaymentType', 'MEMBERSHIP')
       window.location.href = data.checkout.authorizationUrl
     } catch (err) {
@@ -58,11 +91,24 @@ export default function MembershipPage() {
     }
   }
 
-  if (loading) return <main className="membership-experience"><section className="membership-loading"><span className="eyebrow">KEANU REEVES FAN COMMUNITY</span><div className="loading-orb" /><h1>Preparing your membership.</h1><p>Loading the community tiers…</p></section></main>
+  if (loading) {
+    return (
+      <main className="membership-experience">
+        <section className="membership-loading">
+          <span className="eyebrow">KEANU REEVES FAN COMMUNITY</span>
+          <div className="loading-orb" />
+          <h1>Preparing your membership.</h1>
+          <p>Loading the community tiers…</p>
+        </section>
+      </main>
+    )
+  }
 
-  const activePlan = membership?.plan && typeof membership.plan === 'object' ? membership.plan : plans.find((plan) => plan._id === membership?.plan)
-  const memberName = user?.name || user?.fullName || user?.username || 'Community Member'
-  const memberNumber = membership?.membershipNumber || membership?.number || 'KR-••••••'
+  const activePlan = membership?.plan && typeof membership.plan === 'object'
+    ? membership.plan
+    : plans.find((plan) => plan._id === membership?.plan)
+  const memberName = membershipCard?.memberName || user?.name || user?.fullName || user?.username || 'Community Member'
+  const memberNumber = membershipCard?.membershipNumber || membership?.membershipNumber || membership?.number || 'KR-••••••'
 
   return (
     <main className="membership-experience">
@@ -71,10 +117,25 @@ export default function MembershipPage() {
         <div className="membership-hero-mark" aria-hidden="true"><span>KR</span><small>EST. COMMUNITY</small></div>
       </section>
 
-      {membership?.status === 'ACTIVE' && activePlan && (
+      {membership?.status === 'ACTIVE' && activePlan && membershipCard && (
         <section className="current-membership-section page-container">
-          <div className="current-membership"><div><span className="eyebrow">YOUR MEMBERSHIP</span><h2>{activePlan.name || 'Fan Member'}</h2></div><div className="current-membership-meta"><span>STATUS<strong>{membership.status}</strong></span>{membership.expiresAt && <span>EXPIRES<strong>{new Date(membership.expiresAt).toLocaleDateString()}</strong></span>}<span>MEMBER<strong>{memberName}</strong></span></div></div>
-          <div className="member-card-showcase"><div className="member-card-copy"><span className="eyebrow">YOUR DIGITAL MEMBERSHIP CARD</span><h2>A place that<br /><em>belongs to you.</em></h2><p>Your membership tier is represented by a digital card designed for your fan profile. Keep it as your visual mark inside the community.</p></div><MembershipCard plan={activePlan} memberName={memberName} memberNumber={memberNumber} /></div>
+          <div className="current-membership">
+            <div><span className="eyebrow">YOUR MEMBERSHIP</span><h2>{activePlan.name || membershipCard.membershipType || 'Fan Member'}</h2></div>
+            <div className="current-membership-meta">
+              <span>STATUS<strong>{membershipCard.status || membership.status}</strong></span>
+              {membershipCard.expiresAt && <span>EXPIRES<strong>{new Date(membershipCard.expiresAt).toLocaleDateString()}</strong></span>}
+              <span>MEMBER<strong>{memberName}</strong></span>
+            </div>
+          </div>
+
+          <div className="member-card-showcase">
+            <div className="member-card-copy">
+              <span className="eyebrow">YOUR DIGITAL MEMBERSHIP CARD</span>
+              <h2>A place that<br /><em>belongs to you.</em></h2>
+              <p>Your activated membership is represented by a digital card generated from your account. Your tier, member number, dates and status come directly from the membership record.</p>
+            </div>
+            <MembershipCard card={membershipCard} />
+          </div>
         </section>
       )}
 
