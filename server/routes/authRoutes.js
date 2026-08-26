@@ -13,7 +13,7 @@ const validate = require("../middleware/validate");
 const {
   registerValidator,
   loginValidator,
-} = require("../validators/authvalidator");
+} = require("../validators/authValidator");
 
 const router = express.Router();
 
