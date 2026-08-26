@@ -14,6 +14,7 @@ import NotificationsPage from './pages/NotificationsPage'
 import EventsPage from './pages/EventsPage'
 import CommunityPage from './pages/CommunityPage'
 import AdminDashboardPage from './pages/AdminDashboardPage'
+import AdminManagementPage from './pages/AdminManagementPage'
 import SiteHeader from './components/SiteHeader'
 import SiteFooter from './components/SiteFooter'
 
@@ -50,11 +51,7 @@ function PaymentCallback() {
         const response = await fetch(`${API_BASE_URL}/payments/verify`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ reference }) })
         const data = await response.json()
         if (cancelled) return
-        if (!response.ok || !data.success) {
-          const verificationError = new Error(data.message || 'We could not verify this payment.')
-          verificationError.details = data.details || null
-          throw verificationError
-        }
+        if (!response.ok || !data.success) { const verificationError = new Error(data.message || 'We could not verify this payment.'); verificationError.details = data.details || null; throw verificationError }
         setState({ status: 'success', type: data.type || '', message: data.message || 'Payment verified successfully.', membership: data.membership || null, booking: data.booking || null, transaction: data.transaction || null, details: null })
       } catch (error) { if (!cancelled) setState({ status: 'error', message: error.message, type: '', membership: null, booking: null, transaction: null, details: error.details || null }) }
     }
@@ -75,7 +72,7 @@ function PaymentCallback() {
 }
 
 function App() {
-  return <AuthProvider><BrowserRouter><SiteHeader /><Routes><Route path="/" element={<HomePage />} /><Route path="/login" element={<AuthPage mode="login" />} /><Route path="/register" element={<AuthPage mode="register" />} /><Route path="/payment/callback" element={<PaymentCallback />} /><Route path="/membership" element={<ProtectedRoute><MembershipPage /></ProtectedRoute>} /><Route path="/membership/payments" element={<ProtectedRoute><PaymentHistoryPage /></ProtectedRoute>} /><Route path="/meetings" element={<MeetingsPage />} /><Route path="/gifts" element={<GiftsPage />} /><Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} /><Route path="/events" element={<EventsPage />} /><Route path="/community" element={<CommunityPage />} /><Route path="/admin" element={<ProtectedRoute><AdminDashboardPage /></ProtectedRoute>} /><Route path="*" element={<HomePage />} /></Routes><SiteFooter /></BrowserRouter></AuthProvider>
+  return <AuthProvider><BrowserRouter><SiteHeader /><Routes><Route path="/" element={<HomePage />} /><Route path="/login" element={<AuthPage mode="login" />} /><Route path="/register" element={<AuthPage mode="register" />} /><Route path="/payment/callback" element={<PaymentCallback />} /><Route path="/membership" element={<ProtectedRoute><MembershipPage /></ProtectedRoute>} /><Route path="/membership/payments" element={<ProtectedRoute><PaymentHistoryPage /></ProtectedRoute>} /><Route path="/meetings" element={<MeetingsPage />} /><Route path="/gifts" element={<GiftsPage />} /><Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} /><Route path="/events" element={<EventsPage />} /><Route path="/community" element={<CommunityPage />} /><Route path="/admin" element={<ProtectedRoute><AdminDashboardPage /></ProtectedRoute>} /><Route path="/admin/manage" element={<ProtectedRoute><AdminManagementPage /></ProtectedRoute>} /><Route path="*" element={<HomePage />} /></Routes><SiteFooter /></BrowserRouter></AuthProvider>
 }
 
 export default App
