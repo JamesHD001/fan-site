@@ -1,97 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import '../styles/admin.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 const tabs = ['users', 'payments', 'bookings', 'posts']
-
-const api = async (path, token, options = {}) => {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...(options.headers || {}) },
-  })
-  const data = await response.json()
-  if (!response.ok || !data.success) throw new Error(data.message || 'Request failed.')
-  return data.data
-}
-
+const api = async (path, token, options = {}) => { const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...(options.headers || {}) } }); const data = await response.json(); if (!response.ok || !data.success) throw new Error(data.message || 'Request failed.'); return data.data }
 const formatDate = (value) => value ? new Date(value).toLocaleString() : '—'
-const money = (amount, currency = 'NGN') => new Intl.NumberFormat('en-NG', { style: 'currency', currency, maximumFractionDigits: 2 }).format(Number(amount || 0) / (currency === 'NGN' ? 100 : 100))
+const money = (amount, currency = 'NGN') => new Intl.NumberFormat('en-NG', { style: 'currency', currency, maximumFractionDigits: 2 }).format(Number(amount || 0) / 100)
 
 export default function AdminManagementPage() {
-  const { token, user } = useAuth()
-  const [tab, setTab] = useState('users')
-  const [data, setData] = useState({ users: [], payments: [], bookings: [], posts: [] })
-  const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 })
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [busyId, setBusyId] = useState(null)
-
-  const load = async (page = 1) => {
-    setLoading(true)
-    setError('')
-    try {
-      const params = new URLSearchParams({ page, limit: 20 })
-      if (tab === 'users' && search.trim()) params.set('search', search.trim())
-      if ((tab === 'payments' || tab === 'bookings') && status) params.set('status', status)
-      const result = await api(`/admin/${tab}?${params.toString()}`, token)
-      const key = tab
-      setData((current) => ({ ...current, [key]: result[key] || [] }))
-      setPagination(result.pagination || { page: 1, pages: 1, total: 0 })
-    } catch (loadError) {
-      setError(loadError.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
+  const { token, user } = useAuth(); const [tab, setTab] = useState('users'); const [data, setData] = useState({ users: [], payments: [], bookings: [], posts: [] }); const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 }); const [search, setSearch] = useState(''); const [status, setStatus] = useState(''); const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [busyId, setBusyId] = useState(null)
+  const load = async (page = 1) => { setLoading(true); setError(''); try { const params = new URLSearchParams({ page, limit: 20 }); if (tab === 'users' && search.trim()) params.set('search', search.trim()); if ((tab === 'payments' || tab === 'bookings') && status) params.set('status', status); const result = await api(`/admin/${tab}?${params.toString()}`, token); setData((current) => ({ ...current, [tab]: result[tab] || [] })); setPagination(result.pagination || { page: 1, pages: 1, total: 0 }) } catch (err) { setError(err.message) } finally { setLoading(false) } }
   useEffect(() => { if (token && user?.role === 'ADMIN') load(1) }, [token, user?.role, tab, status])
-
-  const visibleRows = useMemo(() => data[tab] || [], [data, tab])
-
-  const updateUser = async (id, isActive) => {
-    setBusyId(id)
-    try { await api(`/admin/users/${id}/status`, token, { method: 'PATCH', body: JSON.stringify({ isActive }) }); await load(pagination.page) } catch (err) { setError(err.message) } finally { setBusyId(null) }
-  }
-
-  const updateBooking = async (id, nextStatus) => {
-    setBusyId(id)
-    try { await api(`/admin/bookings/${id}/status`, token, { method: 'PATCH', body: JSON.stringify({ status: nextStatus }) }); await load(pagination.page) } catch (err) { setError(err.message) } finally { setBusyId(null) }
-  }
-
-  const moderatePost = async (id, nextStatus) => {
-    setBusyId(id)
-    try { await api(`/admin/posts/${id}/moderate`, token, { method: 'PATCH', body: JSON.stringify({ status: nextStatus }) }); await load(pagination.page) } catch (err) { setError(err.message) } finally { setBusyId(null) }
-  }
-
+  const rows = useMemo(() => data[tab] || [], [data, tab])
+  const action = async (id, path, body) => { setBusyId(id); setError(''); try { await api(path, token, { method: 'PATCH', body: JSON.stringify(body) }); await load(pagination.page) } catch (err) { setError(err.message) } finally { setBusyId(null) } }
   if (user?.role !== 'ADMIN') return <main className="placeholder-page"><h1>Access denied</h1><p>You need administrator access to view this page.</p><Link to="/">Return home</Link></main>
-
-  return (
-    <main className="admin-management-page page-container">
-      <header className="page-header"><p className="eyebrow">ADMINISTRATION</p><h1>Management</h1><p className="muted">Review users, transactions, bookings and community posts from one operational workspace.</p><div className="admin-management-nav"><Link className="secondary-button" to="/admin">Dashboard</Link><Link className="secondary-button" to="/">Return home</Link></div></header>
-
-      <nav className="admin-tabs" aria-label="Management sections">{tabs.map((item) => <button key={item} type="button" className={tab === item ? 'active' : ''} onClick={() => { setTab(item); setSearch(''); setStatus('') }}>{item}</button>)}</nav>
-
-      <section className="admin-toolbar">
-        {tab === 'users' && <form onSubmit={(event) => { event.preventDefault(); load(1) }}><input aria-label="Search users" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name, username or email" /><button className="secondary-button" type="submit">Search</button></form>}
-        {(tab === 'payments' || tab === 'bookings') && <select aria-label="Filter by status" value={status} onChange={(event) => setStatus(event.target.value)}><option value="">All statuses</option>{tab === 'payments' ? <><option>PENDING</option><option>SUCCESS</option><option>FAILED</option><option>ABANDONED</option></> : <><option>PENDING_PAYMENT</option><option>CONFIRMED</option><option>DECLINED</option><option>COMPLETED</option></>}</select>}
-        <span>{pagination.total || 0} record{pagination.total === 1 ? '' : 's'}</span>
-      </section>
-
-      {error && <p className="auth-error" role="alert">{error}</p>}
-      {loading ? <p>Loading management data…</p> : (
-        <section className="admin-table-wrap">
-          {tab === 'users' && <table><thead><tr><th>User</th><th>Role</th><th>Status</th><th>Joined</th><th>Action</th></tr></thead><tbody>{visibleRows.map((item) => <tr key={item._id}><td><strong>{item.name || item.username}</strong><small>{item.email}</small></td><td>{item.role}</td><td><span className={`admin-status ${item.isActive ? 'good' : 'bad'}`}>{item.isActive ? 'ACTIVE' : 'DISABLED'}</span></td><td>{formatDate(item.createdAt)}</td><td><button className="text-button" disabled={busyId === item._id} onClick={() => updateUser(item._id, !item.isActive)}>{item.isActive ? 'Disable' : 'Enable'}</button></td></tr>)}</tbody></table>}
-          {tab === 'payments' && <table><thead><tr><th>Customer</th><th>Type</th><th>Amount</th><th>Status</th><th>Reference</th><th>Date</th></tr></thead><tbody>{visibleRows.map((item) => <tr key={item._id}><td><strong>{item.user?.name || item.user?.username || '—'}</strong><small>{item.user?.email}</small></td><td>{item.type}</td><td>{money(item.amount, item.currency || 'NGN')}</td><td><span className="admin-status">{item.status}</span></td><td>{item.reference}</td><td>{formatDate(item.createdAt)}</td></tr>)}</tbody></table>}
-          {tab === 'bookings' && <table><thead><tr><th>Customer</th><th>Meeting</th><th>Scheduled</th><th>Status</th><th>Actions</th></tr></thead><tbody>{visibleRows.map((item) => <tr key={item._id}><td><strong>{item.user?.name || item.user?.username || '—'}</strong><small>{item.user?.email}</small></td><td>{item.meetingType?.name || 'Meeting'}</td><td>{formatDate(item.scheduledFor)}</td><td><span className="admin-status">{item.status}</span></td><td className="admin-actions"><button disabled={busyId === item._id} onClick={() => updateBooking(item._id, 'CONFIRMED')}>Confirm</button><button disabled={busyId === item._id} onClick={() => updateBooking(item._id, 'DECLINED')}>Decline</button><button disabled={busyId === item._id} onClick={() => updateBooking(item._id, 'COMPLETED')}>Complete</button></td></tr>)}</tbody></table>}
-          {tab === 'posts' && <table><thead><tr><th>Author</th><th>Content</th><th>Submitted</th><th>Actions</th></tr></thead><tbody>{visibleRows.map((item) => <tr key={item._id}><td><strong>{item.author?.name || item.author?.username || '—'}</strong><small>{item.author?.email}</small></td><td className="post-preview">{item.content || item.body || '—'}</td><td>{formatDate(item.createdAt)}</td><td className="admin-actions"><button disabled={busyId === item._id} onClick={() => moderatePost(item._id, 'APPROVED')}>Approve</button><button disabled={busyId === item._id} onClick={() => moderatePost(item._id, 'REJECTED')}>Reject</button><button disabled={busyId === item._id} onClick={() => moderatePost(item._id, 'REMOVED')}>Remove</button></td></tr>)}</tbody></table>}
-          {visibleRows.length === 0 && <div className="empty-state"><h2>No records found</h2><p className="muted">There is nothing matching the current filters.</p></div>}
-        </section>
-      )}
-
-      {pagination.pages > 1 && <div className="admin-pagination"><button disabled={pagination.page <= 1 || loading} onClick={() => load(pagination.page - 1)}>← Previous</button><span>Page {pagination.page} of {pagination.pages}</span><button disabled={pagination.page >= pagination.pages || loading} onClick={() => load(pagination.page + 1)}>Next →</button></div>}
-    </main>
-  )
+  return <main className="admin-management-page page-container"><header className="page-header"><p className="eyebrow">ADMINISTRATION</p><h1>Management</h1><p className="muted">Review users, transactions, bookings and community posts from one operational workspace.</p><div className="admin-management-nav"><Link className="secondary-button" to="/admin">Dashboard</Link><Link className="secondary-button" to="/">Return home</Link></div></header><nav className="admin-tabs" aria-label="Management sections">{tabs.map((item) => <button key={item} type="button" className={tab === item ? 'active' : ''} onClick={() => { setTab(item); setSearch(''); setStatus('') }}>{item}</button>)}</nav><section className="admin-toolbar">{tab === 'users' && <form onSubmit={(e) => { e.preventDefault(); load(1) }}><input aria-label="Search users" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, username or email" /><button className="secondary-button" type="submit">Search</button></form>}{(tab === 'payments' || tab === 'bookings') && <select aria-label="Filter by status" value={status} onChange={(e) => setStatus(e.target.value)}><option value="">All statuses</option>{tab === 'payments' ? <><option>PENDING</option><option>SUCCESS</option><option>FAILED</option><option>ABANDONED</option></> : <><option>PENDING_PAYMENT</option><option>CONFIRMED</option><option>DECLINED</option><option>COMPLETED</option></>}</select>}<span>{pagination.total || 0} record{pagination.total === 1 ? '' : 's'}</span></section>{error && <p className="auth-error" role="alert">{error}</p>}{loading ? <p>Loading management data…</p> : <section className="admin-table-wrap">{tab === 'users' && <table><thead><tr><th>User</th><th>Role</th><th>Status</th><th>Joined</th><th>Action</th></tr></thead><tbody>{rows.map((item) => <tr key={item._id}><td><strong>{item.name || item.username}</strong><small>{item.email}</small></td><td>{item.role}</td><td><span className={`admin-status ${item.isActive ? 'good' : 'bad'}`}>{item.isActive ? 'ACTIVE' : 'DISABLED'}</span></td><td>{formatDate(item.createdAt)}</td><td><button className="text-button" disabled={busyId === item._id} onClick={() => action(item._id, `/admin/users/${item._id}/status`, { isActive: !item.isActive })}>{item.isActive ? 'Disable' : 'Enable'}</button></td></tr>)}</tbody></table>}{tab === 'payments' && <table><thead><tr><th>Customer</th><th>Type</th><th>Amount</th><th>Status</th><th>Reference</th><th>Date</th></tr></thead><tbody>{rows.map((item) => <tr key={item._id}><td><strong>{item.user?.name || item.user?.username || '—'}</strong><small>{item.user?.email}</small></td><td>{item.type}</td><td>{money(item.amount, item.currency || 'NGN')}</td><td><span className="admin-status">{item.status}</span></td><td>{item.reference}</td><td>{formatDate(item.createdAt)}</td></tr>)}</tbody></table>}{tab === 'bookings' && <table><thead><tr><th>Customer</th><th>Meeting</th><th>Scheduled</th><th>Status</th><th>Actions</th></tr></thead><tbody>{rows.map((item) => <tr key={item._id}><td><strong>{item.user?.name || item.user?.username || '—'}</strong><small>{item.user?.email}</small></td><td>{item.meetingType?.name || 'Meeting'}</td><td>{formatDate(item.scheduledFor)}</td><td><span className="admin-status">{item.status}</span></td><td className="admin-actions"><button disabled={busyId === item._id} onClick={() => action(item._id, `/admin/bookings/${item._id}/status`, { status: 'CONFIRMED' })}>Confirm</button><button disabled={busyId === item._id} onClick={() => action(item._id, `/admin/bookings/${item._id}/status`, { status: 'DECLINED' })}>Decline</button><button disabled={busyId === item._id} onClick={() => action(item._id, `/admin/bookings/${item._id}/status`, { status: 'COMPLETED' })}>Complete</button></td></tr>)}</tbody></table>}{tab === 'posts' && <table><thead><tr><th>Author</th><th>Content</th><th>Submitted</th><th>Actions</th></tr></thead><tbody>{rows.map((item) => <tr key={item._id}><td><strong>{item.author?.name || item.author?.username || '—'}</strong><small>{item.author?.email}</small></td><td className="post-preview">{item.content || item.body || '—'}</td><td>{formatDate(item.createdAt)}</td><td className="admin-actions"><button disabled={busyId === item._id} onClick={() => action(item._id, `/admin/posts/${item._id}/moderate`, { status: 'APPROVED' })}>Approve</button><button disabled={busyId === item._id} onClick={() => action(item._id, `/admin/posts/${item._id}/moderate`, { status: 'REJECTED' })}>Reject</button><button disabled={busyId === item._id} onClick={() => action(item._id, `/admin/posts/${item._id}/moderate`, { status: 'REMOVED' })}>Remove</button></td></tr>)}</tbody></table>}{rows.length === 0 && <div className="empty-state"><h2>No records found</h2><p className="muted">There is nothing matching the current filters.</p></div>}</section>}{pagination.pages > 1 && <div className="admin-pagination"><button disabled={pagination.page <= 1 || loading} onClick={() => load(pagination.page - 1)}>← Previous</button><span>Page {pagination.page} of {pagination.pages}</span><button disabled={pagination.page >= pagination.pages || loading} onClick={() => load(pagination.page + 1)}>Next →</button></div>}</main>
 }
