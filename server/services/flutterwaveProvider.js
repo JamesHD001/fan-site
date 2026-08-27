@@ -36,6 +36,28 @@ const createPayloadHash = ({ amount, currency, email, reference }) => {
   return crypto.createHash("sha256").update(`${amount}${currency}${email}${reference}${hashedSecret}`, "utf8").digest("hex");
 };
 
+/**
+ * Fetch Flutterwave's current USD -> NGN transfer rate.
+ *
+ * The V3 transfer-rates endpoint returns the rate applicable to the requested
+ * currency pair. We query a representative NGN destination amount and use
+ * data.rate, which Flutterwave documents as the destination-currency amount
+ * required for one unit of the source currency.
+ */
+const getUsdToNgnRate = async () => {
+  const params = new URLSearchParams({
+    amount: "100000",
+    destination_currency: "NGN",
+    source_currency: "USD",
+  });
+  const response = await request(`/transfers/rates?${params.toString()}`, { method: "GET" });
+  const rate = Number(response.data?.rate);
+  if (!Number.isFinite(rate) || rate <= 0) {
+    throw new Error("Flutterwave returned an invalid USD/NGN exchange rate.");
+  }
+  return rate;
+};
+
 const initializeDeposit = ({ reference, email, name, amountMajor, currency = "NGN", metadata = {} }) => {
   if (!reference || !email || !Number.isFinite(Number(amountMajor)) || Number(amountMajor) <= 0 || !currency) {
     throw new Error("Missing required Flutterwave payment initialization data.");
@@ -61,4 +83,4 @@ const getTransactionFee = async ({ amount, currency = "NGN", paymentType = "card
   return request(`/transactions/fee?${params.toString()}`, { method: "GET" });
 };
 
-module.exports = { initializeDeposit, verifyDeposit, getTransactionFee };
+module.exports = { initializeDeposit, verifyDeposit, getTransactionFee, getUsdToNgnRate };
