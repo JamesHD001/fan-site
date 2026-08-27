@@ -1,7 +1,8 @@
 const mongoose = require("mongoose");
 
 const Payment = require("../models/Payment");
-const { initializePayment, verifyDeposit } = require("../services/flutterwaveProvider");
+const { initializeDeposit, verifyDeposit } = require("../services/flutterwaveProvider");
+const { settleSuccessfulPayment } = require("../services/paymentSettlementService");
 
 const createFlutterwaveDeposit = async (req, res) => {
   try {
@@ -15,7 +16,7 @@ const createFlutterwaveDeposit = async (req, res) => {
       user: req.user._id,
       reference,
       type: "DEPOSIT",
-      amount: amount,
+      amount,
       originalAmount: amount,
       currency: "USD",
       provider: "FLUTTERWAVE",
@@ -24,16 +25,18 @@ const createFlutterwaveDeposit = async (req, res) => {
     });
 
     try {
-      const result = await initializePayment({
-        amount: amount / 100,
+      const result = await initializeDeposit({
+        amountMajor: amount / 100,
         currency: "USD",
         reference,
         email: req.user.email,
         name: req.user.name || `${req.user.firstName || ""} ${req.user.lastName || ""}`.trim(),
-        redirectUrl: `${process.env.CLIENT_URL}/payment/flutterwave-callback`,
+        redirectUrl: `${process.env.CLIENT_URL || "http://localhost:5173"}/payment/flutterwave-callback`,
         metadata: { paymentId: payment._id.toString(), userId: req.user._id.toString(), type: "DEPOSIT" },
       });
 
+      payment.providerResponse = result.data || result;
+      await payment.save();
       return res.status(201).json({ success: true, paymentId: payment._id, reference, authorizationUrl: result.data.link });
     } catch (error) {
       payment.status = "FAILED";
@@ -58,7 +61,6 @@ const verifyFlutterwavePayment = async (req, res) => {
     if (!transaction || String(transaction.status).toLowerCase() !== "successful") {
       return res.status(400).json({ success: false, message: "Payment was not successful." });
     }
-
     if (!transaction.tx_ref) return res.status(400).json({ success: false, message: "Transaction reference is missing." });
 
     session = await mongoose.startSession();
@@ -69,12 +71,10 @@ const verifyFlutterwavePayment = async (req, res) => {
       await session.abortTransaction();
       return res.status(404).json({ success: false, message: "Payment record not found." });
     }
-
     if (payment.status === "SUCCESS") {
       await session.abortTransaction();
       return res.json({ success: true, alreadyProcessed: true, payment });
     }
-
     if (String(transaction.currency).toUpperCase() !== String(payment.currency).toUpperCase()) {
       payment.status = "FAILED";
       payment.providerResponse = transaction;
@@ -93,10 +93,8 @@ const verifyFlutterwavePayment = async (req, res) => {
       return res.status(400).json({ success: false, message: "Amount mismatch." });
     }
 
-    const { settleSuccessfulPayment } = require("../services/paymentSettlementService");
     const settlement = await settleSuccessfulPayment({ paymentId: payment._id, transaction, session });
     await session.commitTransaction();
-
     return res.json({ success: true, alreadyProcessed: settlement.alreadySettled, payment: settlement.payment, result: settlement.result });
   } catch (error) {
     if (session?.inTransaction()) await session.abortTransaction();
