@@ -1,13 +1,7 @@
 const mongoose = require("mongoose");
 const Payment = require("../models/Payment");
-const { initializeDeposit, verifyDeposit } = require("../services/flutterwaveProvider");
+const { initializeDeposit, verifyDeposit, getUsdToNgnRate } = require("../services/flutterwaveProvider");
 const { settleSuccessfulPayment } = require("../services/paymentSettlementService");
-
-const getNgnPerUsdRate = () => {
-  const rate = Number(process.env.FLUTTERWAVE_NGN_PER_USD_RATE);
-  if (!Number.isFinite(rate) || rate <= 0) throw new Error("FLUTTERWAVE_NGN_PER_USD_RATE is not configured.");
-  return rate;
-};
 
 const createFlutterwaveDeposit = async (req, res) => {
   try {
@@ -17,8 +11,10 @@ const createFlutterwaveDeposit = async (req, res) => {
       return res.status(400).json({ success: false, message: "Amount must be a positive integer in USD minor units." });
     }
 
-    const exchangeRate = getNgnPerUsdRate();
-    // Lock the provider charge at initialization. Do not recalculate it during verification.
+    // Fetch Flutterwave's current USD/NGN rate at initialization time and lock
+    // the resulting NGN charge on the payment record. Verification never
+    // recalculates the rate, so a later FX movement cannot change the payment.
+    const exchangeRate = await getUsdToNgnRate();
     const providerAmount = Math.ceil((originalAmount / 100) * exchangeRate);
     const reference = `DEP-${Date.now()}-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
 
@@ -33,7 +29,7 @@ const createFlutterwaveDeposit = async (req, res) => {
       exchangeRate,
       provider: "FLUTTERWAVE",
       status: "PENDING",
-      metadata: { purpose: "PLATFORM_CREDIT_DEPOSIT", feePolicy: "MERCHANT_ABSORBS_PROVIDER_FEES" },
+      metadata: { purpose: "PLATFORM_CREDIT_DEPOSIT", feePolicy: "MERCHANT_ABSORBS_PROVIDER_FEES", rateSource: "FLUTTERWAVE_TRANSFER_RATES" },
     });
 
     try {
@@ -47,7 +43,7 @@ const createFlutterwaveDeposit = async (req, res) => {
       });
       payment.providerResponse = checkout;
       await payment.save();
-      return res.status(201).json({ success: true, paymentId: payment._id, reference, checkout });
+      return res.status(201).json({ success: true, paymentId: payment._id, reference, checkout, exchangeRate, providerAmount });
     } catch (error) {
       payment.status = "FAILED";
       payment.providerResponse = { message: error.message };
