@@ -17,26 +17,21 @@ const paymentSchema = new mongoose.Schema(
 
     reference: { type: String, required: true, unique: true, index: true },
 
-    // Amount representing the platform product/credit in minor units.
-    originalAmount: {
-      type: Number,
-      required: true,
-      min: 0,
-      validate: { validator: Number.isInteger, message: "Original amount must be an integer minor-unit amount." },
-    },
+    // Value the member is purchasing/receiving from the platform.
+    originalAmount: { type: Number, required: true, min: 0, validate: { validator: Number.isInteger, message: "Original amount must be an integer minor-unit amount." } },
     originalCurrency: { type: String, default: "USD", uppercase: true, trim: true },
 
-    // Amount actually charged by the external provider, in provider minor units.
-    amount: {
-      type: Number,
-      required: true,
-      min: 0,
-      validate: { validator: Number.isInteger, message: "Amount must be an integer minor-unit amount." },
-    },
+    // Exact amount requested from the external provider, in provider minor units.
+    amount: { type: Number, required: true, min: 0, validate: { validator: Number.isInteger, message: "Provider amount must be an integer minor-unit amount." } },
     currency: { type: String, default: "NGN", uppercase: true, trim: true },
 
-    // Major-unit conversion rate used when the provider currency differs from the platform currency.
+    // Locked conversion rate at initialization. Never recalculate during verification.
     exchangeRate: { type: Number, required: true, min: 0 },
+
+    // Provider costs are settlement/accounting values, not part of payment validation.
+    providerFee: { type: Number, default: null, min: 0 },
+    providerTax: { type: Number, default: null, min: 0 },
+    providerNetSettlement: { type: Number, default: null, min: 0 },
 
     provider: {
       type: String,
@@ -55,10 +50,12 @@ const paymentSchema = new mongoose.Schema(
     paidAt: { type: Date, default: null },
     providerTransactionId: { type: String, default: null, index: true },
     providerResponse: { type: mongoose.Schema.Types.Mixed, default: null },
+    metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
   },
   { timestamps: true }
 );
 
 paymentSchema.index({ user: 1, createdAt: -1 });
+paymentSchema.index({ provider: 1, providerTransactionId: 1 });
 
 module.exports = mongoose.model("Payment", paymentSchema);
