@@ -4,40 +4,63 @@ const Payment = require("../models/Payment");
 const { initializeDeposit, verifyDeposit } = require("../services/flutterwaveProvider");
 const { settleSuccessfulPayment } = require("../services/paymentSettlementService");
 
+const getNgnPerUsdRate = () => {
+  const rate = Number(process.env.FLUTTERWAVE_NGN_PER_USD_RATE);
+  if (!Number.isFinite(rate) || rate <= 0) throw new Error("FLUTTERWAVE_NGN_PER_USD_RATE is not configured.");
+  return rate;
+};
+
 const createFlutterwaveDeposit = async (req, res) => {
   try {
-    const amount = Number(req.body.amount);
-    if (!Number.isInteger(amount) || amount <= 0) {
+    const originalAmount = Number(req.body.amount);
+    if (!Number.isInteger(originalAmount) || originalAmount <= 0) {
       return res.status(400).json({ success: false, message: "Amount must be a positive integer in USD minor units." });
     }
 
+    const exchangeRate = getNgnPerUsdRate();
+    const amountNgnMajor = Math.ceil((originalAmount / 100) * exchangeRate);
     const reference = `DEP-${Date.now()}-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
+
     const payment = await Payment.create({
       user: req.user._id,
       reference,
       type: "DEPOSIT",
-      amount,
-      originalAmount: amount,
-      currency: "USD",
+      amount: amountNgnMajor,
+      originalAmount,
+      originalCurrency: "USD",
+      currency: "NGN",
+      exchangeRate,
       provider: "FLUTTERWAVE",
       status: "PENDING",
-      description: "Platform wallet funding",
     });
 
     try {
-      const result = await initializeDeposit({
-        amountMajor: amount / 100,
-        currency: "USD",
+      const checkout = initializeDeposit({
+        amountMajor: amountNgnMajor,
+        currency: "NGN",
         reference,
         email: req.user.email,
         name: req.user.name || `${req.user.firstName || ""} ${req.user.lastName || ""}`.trim(),
-        redirectUrl: `${process.env.CLIENT_URL || "http://localhost:5173"}/payment/flutterwave-callback`,
         metadata: { paymentId: payment._id.toString(), userId: req.user._id.toString(), type: "DEPOSIT" },
       });
 
-      payment.providerResponse = result.data || result;
+      payment.providerResponse = checkout;
       await payment.save();
-      return res.status(201).json({ success: true, paymentId: payment._id, reference, authorizationUrl: result.data.link });
+
+      return res.status(201).json({
+        success: true,
+        paymentId: payment._id,
+        reference,
+        checkout: {
+          publicKey: checkout.publicKey,
+          reference: checkout.reference,
+          amount: checkout.amount,
+          currency: checkout.currency,
+          paymentOptions: checkout.paymentOptions,
+          payloadHash: checkout.payloadHash,
+          customer: checkout.customer,
+        },
+      });
     } catch (error) {
       payment.status = "FAILED";
       payment.providerResponse = { message: error.message };
@@ -73,9 +96,10 @@ const verifyFlutterwavePayment = async (req, res) => {
     }
     if (payment.status === "SUCCESS") {
       await session.abortTransaction();
-      return res.json({ success: true, alreadyProcessed: true, payment });
+      return res.json({ success: true, alreadyProcessed: true, payment, walletCredited: true });
     }
-    if (String(transaction.currency).toUpperCase() !== String(payment.currency).toUpperCase()) {
+
+    if (String(transaction.currency).toUpperCase() !== "NGN" || String(payment.currency).toUpperCase() !== "NGN") {
       payment.status = "FAILED";
       payment.providerResponse = transaction;
       await payment.save({ session });
@@ -83,8 +107,8 @@ const verifyFlutterwavePayment = async (req, res) => {
       return res.status(400).json({ success: false, message: "Currency mismatch." });
     }
 
-    const expected = Math.round(Number(payment.amount));
-    const received = Math.round(Number(transaction.amount) * 100);
+    const expected = Number(payment.amount);
+    const received = Math.round(Number(transaction.amount));
     if (!Number.isFinite(received) || received !== expected) {
       payment.status = "FAILED";
       payment.providerResponse = transaction;
@@ -95,7 +119,13 @@ const verifyFlutterwavePayment = async (req, res) => {
 
     const settlement = await settleSuccessfulPayment({ paymentId: payment._id, transaction, session });
     await session.commitTransaction();
-    return res.json({ success: true, alreadyProcessed: settlement.alreadySettled, payment: settlement.payment, result: settlement.result });
+    return res.json({
+      success: true,
+      alreadyProcessed: settlement.alreadySettled,
+      walletCredited: true,
+      payment: settlement.payment,
+      result: settlement.result,
+    });
   } catch (error) {
     if (session?.inTransaction()) await session.abortTransaction();
     console.error("Flutterwave payment verification error:", error);
