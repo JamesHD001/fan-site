@@ -1,8 +1,16 @@
+const crypto = require("crypto");
+
 const FLUTTERWAVE_BASE_URL = "https://api.flutterwave.com/v3";
 
 const getSecretKey = () => {
   const key = process.env.FLUTTERWAVE_SECRET_KEY;
   if (!key) throw new Error("FLUTTERWAVE_SECRET_KEY is not configured.");
+  return key;
+};
+
+const getPublicKey = () => {
+  const key = process.env.FLUTTERWAVE_PUBLIC_KEY;
+  if (!key) throw new Error("FLUTTERWAVE_PUBLIC_KEY is not configured.");
   return key;
 };
 
@@ -26,26 +34,27 @@ const request = async (path, options = {}) => {
   return body;
 };
 
-const initializeDeposit = async ({ reference, email, name, amountMajor, currency, redirectUrl, metadata = {} }) => {
-  if (!reference || !email || !amountMajor || !currency || !redirectUrl) {
+const createPayloadHash = ({ amount, currency, email, reference }) => {
+  const hashedSecret = crypto.createHash("sha256").update(getSecretKey(), "utf8").digest("hex");
+  const value = `${amount}${currency}${email}${reference}${hashedSecret}`;
+  return crypto.createHash("sha256").update(value, "utf8").digest("hex");
+};
+
+const initializeDeposit = ({ reference, email, name, amountMajor, currency = "NGN", metadata = {} }) => {
+  if (!reference || !email || !amountMajor || !currency) {
     throw new Error("Missing required Flutterwave payment initialization data.");
   }
 
-  return request("/payments", {
-    method: "POST",
-    body: JSON.stringify({
-      tx_ref: reference,
-      amount: amountMajor,
-      currency,
-      redirect_url: redirectUrl,
-      customer: { email, name: name || undefined },
-      customizations: {
-        title: "Keanu Reeves Fan Community",
-        description: "Platform credit deposit",
-      },
-      meta: metadata,
-    }),
-  });
+  return {
+    publicKey: getPublicKey(),
+    reference,
+    amount: amountMajor,
+    currency,
+    paymentOptions: "card, banktransfer, ussd",
+    payloadHash: createPayloadHash({ amount: amountMajor, currency, email, reference }),
+    customer: { email, name: name || undefined },
+    metadata,
+  };
 };
 
 const verifyDeposit = async (transactionId) => {
