@@ -5,6 +5,26 @@ const Payment = require("../models/Payment");
 const { creditWallet } = require("./walletService");
 const { calculateExpiryDate, generateMembershipNumber } = require("../utils/membership");
 
+/**
+ * Persist provider-reported fee/tax/settlement and transaction id on a payment.
+ * Shared by the webhook and client-side verify paths so both record identical
+ * accounting data. Fee/tax values never affect payment validation.
+ */
+const applyProviderTransactionDetails = (payment, transaction) => {
+  if (transaction.id !== undefined && transaction.id !== null) {
+    payment.providerTransactionId = String(transaction.id);
+  }
+  if (transaction.fee !== undefined && Number.isFinite(Number(transaction.fee))) {
+    payment.providerFee = Number(transaction.fee);
+  }
+  if (transaction.tax !== undefined && Number.isFinite(Number(transaction.tax))) {
+    payment.providerTax = Number(transaction.tax);
+  }
+  if (transaction.amount_settled !== undefined && Number.isFinite(Number(transaction.amount_settled))) {
+    payment.providerNetSettlement = Number(transaction.amount_settled);
+  }
+};
+
 const settleSuccessfulPayment = async ({ paymentId, transaction, session }) => {
   if (!paymentId || !transaction || !session) {
     throw new Error("Payment settlement requires paymentId, transaction and session.");
@@ -19,6 +39,20 @@ const settleSuccessfulPayment = async ({ paymentId, transaction, session }) => {
       alreadySettled: true,
       notification: null,
       result: await getSettlementResult(payment, session),
+    };
+  }
+
+  // Atomic claim: a concurrent webhook and client-side verify can both reach
+  // this point before either commits, so the pre-check above is not sufficient.
+  // claimForSettlement transitions PENDING/PROCESSING -> PROCESSING atomically;
+  // a null result means another path has already claimed (or resolved) it.
+  const claimed = await Payment.claimForSettlement(payment._id, session);
+  if (!claimed) {
+    return {
+      payment,
+      alreadySettled: payment.status === "SUCCESS",
+      notification: null,
+      result: payment.status === "SUCCESS" ? await getSettlementResult(payment, session) : {},
     };
   }
 
@@ -120,7 +154,7 @@ const settleSuccessfulPayment = async ({ paymentId, transaction, session }) => {
 const markPaymentSuccessful = (payment, transaction) => {
   payment.status = "SUCCESS";
   payment.paidAt = transaction.paid_at ? new Date(transaction.paid_at) : new Date();
-  if (transaction.id !== undefined && transaction.id !== null) payment.providerTransactionId = String(transaction.id);
+  applyProviderTransactionDetails(payment, transaction);
   payment.providerResponse = transaction;
 };
 
@@ -138,4 +172,4 @@ const getSettlementResult = async (payment, session) => {
   return {};
 };
 
-module.exports = { settleSuccessfulPayment };
+module.exports = { settleSuccessfulPayment, applyProviderTransactionDetails };

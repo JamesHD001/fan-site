@@ -2,7 +2,7 @@ const crypto = require("crypto");
 const mongoose = require("mongoose");
 const Payment = require("../models/Payment");
 const { verifyDeposit } = require("../services/flutterwaveProvider");
-const { settleSuccessfulPayment } = require("../services/paymentSettlementService");
+const { settleSuccessfulPayment, applyProviderTransactionDetails } = require("../services/paymentSettlementService");
 
 const safeEqual = (left, right) => {
   const a = Buffer.from(String(left), "utf8");
@@ -85,18 +85,8 @@ const handleFlutterwaveWebhook = async (req, res) => {
       return res.status(200).send("Payment already processed.");
     }
 
-    payment.providerTransactionId = String(transaction.id);
     payment.providerResponse = transaction;
-
-    if (transaction.fee !== undefined && Number.isFinite(Number(transaction.fee))) {
-      payment.providerFee = Number(transaction.fee);
-    }
-    if (transaction.tax !== undefined && Number.isFinite(Number(transaction.tax))) {
-      payment.providerTax = Number(transaction.tax);
-    }
-    if (transaction.amount_settled !== undefined && Number.isFinite(Number(transaction.amount_settled))) {
-      payment.providerNetSettlement = Number(transaction.amount_settled);
-    }
+    applyProviderTransactionDetails(payment, transaction);
 
     if (String(transaction.status).toLowerCase() !== "successful") {
       payment.status = "PROCESSING";
@@ -106,10 +96,12 @@ const handleFlutterwaveWebhook = async (req, res) => {
     }
 
     if (String(transaction.currency).toUpperCase() !== String(payment.currency).toUpperCase()) {
-      payment.status = "FAILED";
+      // Customer really paid — flag for manual reconciliation, never auto-FAILED.
+      payment.status = "REQUIRES_REVIEW";
+      payment.metadata = { ...payment.metadata, reviewReason: "CURRENCY_MISMATCH", expectedCurrency: payment.currency, receivedCurrency: transaction.currency };
       await payment.save({ session });
       await session.commitTransaction();
-      return res.status(400).send("Currency mismatch.");
+      return res.status(409).send("Currency mismatch. Flagged for review.");
     }
 
     // Flutterwave amount is expressed in the transaction currency's major unit.
@@ -117,10 +109,11 @@ const handleFlutterwaveWebhook = async (req, res) => {
     const expected = Number(payment.amount);
     const received = Number(transaction.amount);
     if (!Number.isFinite(received) || received !== expected) {
-      payment.status = "FAILED";
+      payment.status = "REQUIRES_REVIEW";
+      payment.metadata = { ...payment.metadata, reviewReason: "AMOUNT_MISMATCH", expectedProviderAmount: expected, receivedProviderAmount: received };
       await payment.save({ session });
       await session.commitTransaction();
-      return res.status(400).send("Amount mismatch.");
+      return res.status(409).send("Amount mismatch. Flagged for review.");
     }
 
     await settleSuccessfulPayment({ paymentId: payment._id, transaction, session });

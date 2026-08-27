@@ -42,13 +42,20 @@ const paymentSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["PENDING", "PROCESSING", "SUCCESS", "FAILED", "ABANDONED", "EXPIRED", "REFUNDED", "REVERSED"],
+      enum: ["PENDING", "PROCESSING", "SUCCESS", "FAILED", "ABANDONED", "EXPIRED", "REFUNDED", "REVERSED", "REQUIRES_REVIEW"],
       default: "PENDING",
       index: true,
     },
 
     paidAt: { type: Date, default: null },
-    providerTransactionId: { type: String, default: null, index: true },
+    providerTransactionId: {
+      type: String,
+      default: null,
+      // Guards against two payment records being settled from one provider
+      // transaction (e.g. concurrent webhook + client-side verify). Only one
+      // payment may ever claim a given provider transaction id.
+      index: { unique: true, sparse: true },
+    },
     providerResponse: { type: mongoose.Schema.Types.Mixed, default: null },
     metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
   },
@@ -57,5 +64,15 @@ const paymentSchema = new mongoose.Schema(
 
 paymentSchema.index({ user: 1, createdAt: -1 });
 paymentSchema.index({ provider: 1, providerTransactionId: 1 });
+
+// Atomic claim helper: transitions a payment out of a pre-success state only if
+// it is still in that state. Returns the updated doc or null if already claimed.
+paymentSchema.statics.claimForSettlement = function (paymentId, session) {
+  return this.findOneAndUpdate(
+    { _id: paymentId, status: { $in: ["PENDING", "PROCESSING"] } },
+    { $set: { status: "PROCESSING" } },
+    { new: true, session }
+  );
+};
 
 module.exports = mongoose.model("Payment", paymentSchema);

@@ -2,6 +2,9 @@ const crypto = require("crypto");
 
 const FLUTTERWAVE_BASE_URL = "https://api.flutterwave.com/v3";
 
+// In-process USD/NGN rate cache: { value: number|null, fetchedAt: number }
+const rateCache = { value: null, fetchedAt: 0 };
+
 const getSecretKey = () => {
   const key = process.env.FLUTTERWAVE_SECRET_KEY;
   if (!key) throw new Error("FLUTTERWAVE_SECRET_KEY is not configured.");
@@ -45,16 +48,43 @@ const createPayloadHash = ({ amount, currency, email, reference }) => {
  * required for one unit of the source currency.
  */
 const getUsdToNgnRate = async () => {
+  // Short-lived cache: the rate only needs to be directionally fresh at deposit
+  // init time (it is locked on the payment record anyway). Reduces provider
+  // load and keeps deposits flowing when the rates endpoint is degraded.
+  const TTL_MS = Number(process.env.FX_RATE_CACHE_TTL_MS || 5 * 60 * 1000);
+  if (rateCache.value !== null && Date.now() - rateCache.fetchedAt < TTL_MS) {
+    return rateCache.value;
+  }
+
   const params = new URLSearchParams({
     amount: "100000",
     destination_currency: "NGN",
     source_currency: "USD",
   });
-  const response = await request(`/transfers/rates?${params.toString()}`, { method: "GET" });
+
+  let response;
+  try {
+    response = await request(`/transfers/rates?${params.toString()}`, {
+      method: "GET",
+      signal: AbortSignal.timeout(Number(process.env.FX_RATE_TIMEOUT_MS || 8000)),
+    });
+  } catch (error) {
+    // Stale-but-served fallback: better than blocking all deposits if Flutterwave's
+    // rates endpoint is down. Staleness is bounded by the fallback max age.
+    const maxStaleMs = Number(process.env.FX_RATE_MAX_STALE_MS || 24 * 60 * 60 * 1000);
+    if (rateCache.value !== null && Date.now() - rateCache.fetchedAt < maxStaleMs) {
+      console.warn("Flutterwave rate fetch failed; serving cached rate.", error.message);
+      return rateCache.value;
+    }
+    throw error;
+  }
+
   const rate = Number(response.data?.rate);
   if (!Number.isFinite(rate) || rate <= 0) {
     throw new Error("Flutterwave returned an invalid USD/NGN exchange rate.");
   }
+  rateCache.value = rate;
+  rateCache.fetchedAt = Date.now();
   return rate;
 };
 
