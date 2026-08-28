@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import '../styles/home.css'
 
+const KEANU_IMAGE = 'https://commons.wikimedia.org/wiki/Special:FilePath/Keanu%20Reeves-2019.jpg?width=1200'
+
 const highlights = [
   { number: '01', title: 'Connect', text: 'Join a respectful fan community built around conversation, shared moments and genuine appreciation.' },
   { number: '02', title: 'Experience', text: 'Explore membership, events, digital gifts and opportunities designed to make your fan journey memorable.' },
@@ -31,7 +33,7 @@ export default function HomePage() {
   return (
     <main className="home-page">
       <section className="hero-section">
-        <div className="hero-art" aria-hidden="true"><div className="hero-glow hero-glow-one" /><div className="hero-glow hero-glow-two" /><div className="hero-grid" /></div>
+        <div className="hero-art" aria-hidden="true"><div className="hero-image" style={{ backgroundImage: `url("${KEANU_IMAGE}")` }} /><div className="hero-glow hero-glow-one" /><div className="hero-glow hero-glow-two" /><div className="hero-grid" /></div>
         <div className="hero-content page-container">
           <p className="hero-kicker">THE OFFICIAL FAN COMMUNITY EXPERIENCE</p>
           <h1><span>KEANU</span> REEVES</h1>
@@ -48,7 +50,7 @@ export default function HomePage() {
         <div className="highlight-grid">{highlights.map((item) => <article className="highlight-card" key={item.number}><span>{item.number}</span><h3>{item.title}</h3><p>{item.text}</p></article>)}</div>
       </section>
 
-      <section className="about-strip"><div className="about-visual" aria-hidden="true"><span>KR</span></div><div className="about-copy"><p className="eyebrow">THE PERSON BEHIND THE LEGACY</p><h2>More than a screen presence.</h2><p>Known for memorable performances in dramas, comedies and action films, Reeves has remained a distinctive presence across generations of audiences. His work includes cult favorites, blockbuster franchises and character-driven stories.</p><p className="about-note">This fan community celebrates the work and career of Keanu Reeves. It is an independent fan project and is not the official website of Keanu Reeves.</p></div></section>
+      <section className="about-strip"><div className="about-visual"><img src={KEANU_IMAGE} alt="Keanu Reeves in 2019" loading="lazy" /><span className="about-visual-monogram">KR</span><small>Photo: Governo do Estado de São Paulo · CC BY 2.0</small></div><div className="about-copy"><p className="eyebrow">THE PERSON BEHIND THE LEGACY</p><h2>More than a screen presence.</h2><p>Known for memorable performances in dramas, comedies and action films, Reeves has remained a distinctive presence across generations of audiences. His work includes cult favorites, blockbuster franchises and character-driven stories.</p><p className="about-note">This fan community celebrates the work and career of Keanu Reeves. It is an independent fan project and is not the official website of Keanu Reeves.</p></div></section>
 
       <section className="career-section section-shell" id="career">
         <div className="section-heading split-heading career-heading"><div><p className="eyebrow">THE JOURNEY</p><h2>A career measured in chapters.</h2></div><p>Explore a selection of milestones that shaped an unusually varied screen career—from early dramatic work to defining franchises.</p></div>
