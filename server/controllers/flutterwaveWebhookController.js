@@ -14,7 +14,6 @@ const verifyFlutterwaveSignature = (req) => {
   const secret = String(process.env.FLUTTERWAVE_WEBHOOK_SECRET_HASH || "");
   if (!secret) return false;
 
-  // Current Flutterwave webhook signing: HMAC-SHA256(raw request body, secret), Base64 encoded.
   const signature = String(req.headers["flutterwave-signature"] || "");
   if (signature) {
     const rawBody = Buffer.isBuffer(req.body)
@@ -30,7 +29,6 @@ const verifyFlutterwaveSignature = (req) => {
     return safeEqual(expected, signature);
   }
 
-  // Backward compatibility for older V3/Rave webhook configurations that send verif-hash.
   const legacySignature = String(req.headers["verif-hash"] || "");
   return Boolean(legacySignature) && safeEqual(secret, legacySignature);
 };
@@ -47,7 +45,6 @@ const handleFlutterwaveWebhook = async (req, res) => {
     return res.status(400).send("Invalid JSON payload.");
   }
 
-  // Current Flutterwave payloads use `type`; older payloads may use `event`.
   const eventType = event?.type || event?.event;
   if (!event?.data || (eventType && eventType !== "charge.completed")) {
     return res.status(200).send("Event received.");
@@ -85,6 +82,29 @@ const handleFlutterwaveWebhook = async (req, res) => {
       return res.status(200).send("Payment already processed.");
     }
 
+    // Claim the provider transaction id before any settlement decision so the
+    // same provider transaction cannot be associated with multiple payments.
+    const providerTransactionId = String(transaction.id || transactionId);
+    const existingOwner = await Payment.findOne({
+      provider: "FLUTTERWAVE",
+      providerTransactionId,
+      _id: { $ne: payment._id },
+    }).session(session);
+
+    if (existingOwner) {
+      payment.providerResponse = transaction;
+      payment.status = "REQUIRES_REVIEW";
+      payment.metadata = {
+        ...payment.metadata,
+        reviewReason: "PROVIDER_TRANSACTION_ALREADY_CLAIMED",
+        providerTransactionId,
+        existingPaymentId: existingOwner._id.toString(),
+      };
+      await payment.save({ session });
+      await session.commitTransaction();
+      return res.status(200).send("Transaction conflict. Flagged for review.");
+    }
+
     payment.providerResponse = transaction;
     applyProviderTransactionDetails(payment, transaction);
 
@@ -96,24 +116,36 @@ const handleFlutterwaveWebhook = async (req, res) => {
     }
 
     if (String(transaction.currency).toUpperCase() !== String(payment.currency).toUpperCase()) {
-      // Customer really paid — flag for manual reconciliation, never auto-FAILED.
+      // The customer really paid, so preserve the provider evidence and flag it.
+      // HTTP 200 prevents unnecessary provider webhook retries; reconciliation or
+      // an admin can resolve the payment later.
       payment.status = "REQUIRES_REVIEW";
-      payment.metadata = { ...payment.metadata, reviewReason: "CURRENCY_MISMATCH", expectedCurrency: payment.currency, receivedCurrency: transaction.currency };
+      payment.metadata = {
+        ...payment.metadata,
+        reviewReason: "CURRENCY_MISMATCH",
+        expectedCurrency: payment.currency,
+        receivedCurrency: transaction.currency,
+      };
       await payment.save({ session });
       await session.commitTransaction();
-      return res.status(409).send("Currency mismatch. Flagged for review.");
+      return res.status(200).send("Currency mismatch. Flagged for review.");
     }
 
-    // Flutterwave amount is expressed in the transaction currency's major unit.
-    // Our Payment.amount is also stored as NGN major-unit amount for this flow.
-    const expected = Number(payment.amount);
-    const received = Number(transaction.amount);
-    if (!Number.isFinite(received) || received !== expected) {
+    // Flutterwave returns transaction amounts in major units. Payment.amount is
+    // stored in provider minor units, so normalize both sides before comparing.
+    const expectedProviderAmountMinor = Number(payment.amount);
+    const receivedProviderAmountMinor = Math.round(Number(transaction.amount) * 100);
+    if (!Number.isFinite(receivedProviderAmountMinor) || receivedProviderAmountMinor !== expectedProviderAmountMinor) {
       payment.status = "REQUIRES_REVIEW";
-      payment.metadata = { ...payment.metadata, reviewReason: "AMOUNT_MISMATCH", expectedProviderAmount: expected, receivedProviderAmount: received };
+      payment.metadata = {
+        ...payment.metadata,
+        reviewReason: "AMOUNT_MISMATCH",
+        expectedProviderAmountMinor,
+        receivedProviderAmountMinor,
+      };
       await payment.save({ session });
       await session.commitTransaction();
-      return res.status(409).send("Amount mismatch. Flagged for review.");
+      return res.status(200).send("Amount mismatch. Flagged for review.");
     }
 
     await settleSuccessfulPayment({ paymentId: payment._id, transaction, session });
