@@ -10,7 +10,6 @@ export default function DashboardPage() {
   const { token, user } = useAuth()
   const [membership, setMembership] = useState(null)
   const [card, setCard] = useState(null)
-  const [wallet, setWallet] = useState(null)
   const [payments, setPayments] = useState([])
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(true)
@@ -21,27 +20,37 @@ export default function DashboardPage() {
     const headers = { Authorization: `Bearer ${token}` }
     const loadDashboard = async () => {
       try {
-        const [membershipResponse, cardResponse, paymentsResponse, notificationsResponse, walletResponse] = await Promise.all([
+        const [membershipResponse, cardResponse, paymentsResponse, notificationsResponse] = await Promise.all([
           fetch(`${API_BASE_URL}/memberships/me`, { headers }),
           fetch(`${API_BASE_URL}/memberships/card`, { headers }),
           fetch(`${API_BASE_URL}/memberships/payments`, { headers }),
           fetch(`${API_BASE_URL}/notifications?limit=5`, { headers }),
-          fetch(`${API_BASE_URL}/wallet`, { headers }),
         ])
-        const [membershipData, cardData, paymentsData, notificationsData, walletData] = await Promise.all([
-          membershipResponse.json(), cardResponse.json(), paymentsResponse.json(), notificationsResponse.json(), walletResponse.json(),
+
+        const [membershipData, cardData, paymentsData, notificationsData] = await Promise.all([
+          membershipResponse.json(),
+          cardResponse.json(),
+          paymentsResponse.json(),
+          notificationsResponse.json(),
         ])
+
         if (!cancelled) {
           setMembership(membershipData.membership || null)
           setCard(cardData.card || null)
           setPayments(paymentsData.payments || [])
           setNotifications(notificationsData.notifications || [])
-          setWallet(walletData.wallet || null)
-          if (!membershipResponse.ok && membershipResponse.status !== 404) setError(membershipData.message || 'Unable to load membership.')
+
+          if (!membershipResponse.ok && membershipResponse.status !== 404) {
+            setError(membershipData.message || 'Unable to load membership.')
+          }
         }
-      } catch (err) { if (!cancelled) setError(err.message || 'Unable to load your dashboard.') }
-      finally { if (!cancelled) setLoading(false) }
+      } catch (err) {
+        if (!cancelled) setError(err.message || 'Unable to load your dashboard.')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
+
     if (token) loadDashboard()
     return () => { cancelled = true }
   }, [token])
@@ -53,7 +62,6 @@ export default function DashboardPage() {
   const status = membership?.status || card?.status || 'NOT ACTIVE'
   const memberNumber = card?.membershipNumber || membership?.membershipNumber || 'Not assigned'
   const expiresAt = card?.expiresAt || membership?.expiresAt
-  const balance = wallet ? (wallet.availableBalance / 100).toFixed(2) : '0.00'
 
   return (
     <main className="dashboard-page">
@@ -72,17 +80,17 @@ export default function DashboardPage() {
           </article>
 
           <article className="dashboard-card">
-            <div className="dashboard-card-heading"><span className="eyebrow">ACCOUNT BALANCE</span><Link to="/wallet/add-funds">Add funds →</Link></div>
-            <h2>${balance}</h2>
-            <p>Use your platform balance for memberships, meetings, gifts and other purchases.</p>
-            <Link className="dashboard-text-link" to="/wallet/add-funds">Manage balance →</Link>
+            <div className="dashboard-card-heading"><span className="eyebrow">PAYMENT SUPPORT</span><Link to="/membership">Membership →</Link></div>
+            <h2>Pay securely with support.</h2>
+            <p>All purchases now use a payment request and unique token. A designated support administrator provides the payment instructions and confirms the transaction.</p>
+            <Link className="dashboard-text-link" to="/membership">Start a purchase →</Link>
           </article>
         </section>
 
         <section className="dashboard-grid dashboard-lower">
           <article className="dashboard-card">
             <div className="dashboard-card-heading"><span className="eyebrow">RECENT PAYMENTS</span><Link to="/membership/payments">View all →</Link></div>
-            {payments.length === 0 ? <p className="dashboard-empty">No payment activity yet.</p> : <div className="dashboard-list">{payments.slice(0, 4).map((payment) => <div className="dashboard-list-row" key={payment._id}><div><b>{payment.membership?.plan?.name || payment.type}</b><small>{formatDate(payment.paidAt || payment.createdAt)}</small></div><strong>{payment.status === 'SUCCESS' ? 'Paid' : String(payment.status || '').replaceAll('_', ' ')}</strong></div>)}</div>}
+            {payments.length === 0 ? <p className="dashboard-empty">No payment activity yet.</p> : <div className="dashboard-list">{payments.slice(0, 4).map((payment) => <div className="dashboard-list-row" key={payment._id}><div><b>{payment.membership?.plan?.name || payment.metadata?.description || payment.type}</b><small>{formatDate(payment.paidAt || payment.createdAt)}</small></div><strong>{payment.status === 'SUCCESS' ? 'Paid' : String(payment.status || '').replaceAll('_', ' ')}</strong></div>)}</div>}
           </article>
           <article className="dashboard-card">
             <div className="dashboard-card-heading"><span className="eyebrow">RECENT NOTIFICATIONS</span><Link to="/notifications">View all →</Link></div>
@@ -90,7 +98,7 @@ export default function DashboardPage() {
           </article>
         </section>
 
-        <section className="dashboard-quick-actions"><span className="eyebrow">QUICK ACCESS</span><div><Link to="/wallet/add-funds">Add funds <span>→</span></Link><Link to="/meetings">Book a meeting <span>→</span></Link><Link to="/gifts">Send a gift <span>→</span></Link><Link to="/community">Visit community <span>→</span></Link><Link to="/settings">Manage account <span>→</span></Link></div></section>
+        <section className="dashboard-quick-actions"><span className="eyebrow">QUICK ACCESS</span><div><Link to="/membership">Membership <span>→</span></Link><Link to="/membership/payments">Payment history <span>→</span></Link><Link to="/meetings">Book a meeting <span>→</span></Link><Link to="/gifts">Send a gift <span>→</span></Link><Link to="/community">Visit community <span>→</span></Link><Link to="/settings">Manage account <span>→</span></Link></div></section>
       </section>
     </main>
   )
