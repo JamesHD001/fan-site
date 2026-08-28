@@ -7,11 +7,11 @@ const tierClass = (card = {}) => {
 }
 
 const TIER_META = {
-  supporter: { rank: 'I', label: 'COMMUNITY', tagline: 'A place to belong', accent: 'Supporter' },
-  insider: { rank: 'II', label: 'INSIDER', tagline: 'Closer to the experience', accent: 'Insider' },
-  premier: { rank: 'III', label: 'PREMIER', tagline: 'A more exclusive experience', accent: 'Premier' },
-  elite: { rank: 'IV', label: 'ELITE', tagline: 'Reserved for dedicated members', accent: 'Elite' },
-  vip: { rank: 'V', label: 'VIP', tagline: 'The highest community tier', accent: 'VIP' },
+  supporter: { rank: 'I', label: 'SUPPORTER', accent: 'Supporter' },
+  insider: { rank: 'II', label: 'INSIDER', accent: 'Insider' },
+  premier: { rank: 'III', label: 'PREMIER', accent: 'Premier' },
+  elite: { rank: 'IV', label: 'ELITE', accent: 'Elite' },
+  vip: { rank: 'V', label: 'VIP', accent: 'VIP' },
 }
 
 const formatDate = (value) => {
@@ -33,96 +33,77 @@ export default function MembershipCard({ card, onPrint }) {
   const status = card?.status || 'ACTIVE'
   const memberName = card?.memberName || 'Community Member'
   const membershipType = card?.membershipType || meta.accent
+  const hasSignature = tier === 'elite' || tier === 'vip'
 
   return (
-    <div className="membership-card-wrap" style={{ width: 'min(100%, 900px)', justifySelf: 'center' }}>
+    <div className="membership-card-wrap">
       <article
         className={`digital-membership-card digital-card-${tier}`}
         aria-label={`${membershipType} digital membership card`}
       >
-        <div className="digital-card-atmosphere" aria-hidden="true" />
-        <div className="digital-card-noise" aria-hidden="true" />
+        <div className="digital-card-background" aria-hidden="true" />
+        <div className="digital-card-watermark" aria-hidden="true">KR</div>
+
+        <header className="digital-card-header">
+          <div>
+            <span className="digital-card-tier-label">TIER {meta.rank}</span>
+            <h2>{meta.label}</h2>
+            <p>MEMBER</p>
+          </div>
+          <div className="digital-card-brand">
+            <strong>KEANU REEVES</strong>
+            <span>OFFICIAL FAN COMMUNITY</span>
+          </div>
+        </header>
+
+        <div className="digital-card-divider" aria-hidden="true" />
+
+        <div className="digital-card-member">
+          <div className="digital-card-member-avatar">
+            {card?.profileImage ? <img src={card.profileImage} alt="" /> : getInitials(memberName)}
+          </div>
+          <div className="digital-card-member-details">
+            <span>MEMBER NAME</span>
+            <strong>{memberName}</strong>
+            <span>MEMBERSHIP NUMBER</span>
+            <strong>{card?.membershipNumber || 'KR-••••••'}</strong>
+          </div>
+        </div>
+
         <div className="digital-card-tier-watermark" aria-hidden="true">{meta.rank}</div>
 
-        <div className="digital-card-header">
-          <div className="digital-card-brand">
-            <span className="digital-card-brand-mark">KR</span>
-            <span>KEANU REEVES<br /><b>FAN COMMUNITY</b></span>
-          </div>
-          <div className="digital-card-tier-badge">
-            <span>TIER {meta.rank}</span>
-            <strong>{meta.label}</strong>
-          </div>
-        </div>
-
-        <div className="digital-card-chip" aria-hidden="true">
-          <span /><span /><span />
-        </div>
-
-        <div className="digital-card-content">
-          <span className="digital-card-label">DIGITAL MEMBERSHIP</span>
-          <h3>{membershipType}</h3>
-          <p>{card?.badge || meta.tagline}</p>
-        </div>
-
-        <div className="digital-card-member-avatar" aria-hidden="true">
-          {card?.profileImage ? <img src={card.profileImage} alt="" /> : getInitials(memberName)}
-        </div>
-
-        {tier === 'premier' && <div className="digital-card-seal" aria-hidden="true"><span>KR</span><small>PREMIER</small></div>}
-        {tier === 'elite' && <div className="digital-card-elite-stripe" aria-hidden="true" />}
-        {tier === 'vip' && (
-          <div
-            className="digital-card-celebrity-mark"
-            aria-label="Keanu Reeves signature"
-            style={{
-              position: 'absolute',
-              right: '7%',
-              top: '25%',
-              width: 'clamp(115px, 20%, 180px)',
-              zIndex: 4,
-              transform: 'rotate(-6deg)',
-            }}
-          >
-            <img
-              className="digital-card-signature"
-              src={keanuSignature}
-              alt="Keanu Reeves signature"
-              style={{
-                display: 'block',
-                width: '100%',
-                height: 'auto',
-                filter: 'brightness(0) saturate(100%) invert(76%) sepia(38%) saturate(670%) hue-rotate(359deg) brightness(91%) contrast(87%)',
-              }}
-            />
-            <small style={{ display: 'block', marginTop: '3px', textAlign: 'center', color: '#d5b26d', fontSize: '5px', letterSpacing: '.2em' }}>
-              CELEBRITY EDITION
-            </small>
+        {tier === 'premier' && (
+          <div className="digital-card-seal" aria-hidden="true">
+            <span>KR</span>
+            <small>III</small>
           </div>
         )}
 
-        <div className="digital-card-footer">
-          <div>
-            <span>MEMBER</span>
-            <strong>{memberName}</strong>
+        {hasSignature && (
+          <div className="digital-card-celebrity-mark" aria-label="Keanu Reeves signature">
+            <img src={keanuSignature} alt="Keanu Reeves signature" />
+            <small>CELEBRITY EDITION</small>
           </div>
+        )}
+
+        <footer className="digital-card-footer">
           <div>
-            <span>MEMBERSHIP NO.</span>
-            <strong>{card?.membershipNumber || 'KR-••••••'}</strong>
-          </div>
-          <div>
-            <span>ISSUED</span>
+            <span>MEMBER SINCE</span>
             <strong>{formatDate(card?.startedAt)}</strong>
           </div>
           <div>
-            <span>EXPIRES</span>
+            <span>VALID THRU</span>
             <strong>{formatDate(card?.expiresAt)}</strong>
           </div>
-          <div className="digital-card-status" aria-label={`Membership status: ${status}`}>
+          <div>
+            <span>LEVEL</span>
+            <strong>{membershipType}</strong>
+          </div>
+          <div className="digital-card-status">
             <span>STATUS</span>
             <strong><i />{status}</strong>
           </div>
-        </div>
+        </footer>
       </article>
 
       <div className="digital-card-caption">
