@@ -24,39 +24,15 @@ const getDashboardStats = async (req, res) => {
         { $group: { _id: "$type", total: { $sum: "$originalAmount" }, count: { $sum: 1 } } }
       ])
     ]);
-
-    const revenueByType = {
-      MEMBERSHIP: { total: 0, count: 0 },
-      MEETING: { total: 0, count: 0 },
-      GIFT: { total: 0, count: 0 }
-    };
+    const revenueByType = { MEMBERSHIP: { total: 0, count: 0 }, MEETING: { total: 0, count: 0 }, GIFT: { total: 0, count: 0 } };
     let totalRevenue = 0;
     let totalTransactions = 0;
-
     for (const entry of paymentAggregation) {
       if (revenueByType[entry._id]) revenueByType[entry._id] = { total: entry.total, count: entry.count };
       totalRevenue += entry.total;
       totalTransactions += entry.count;
     }
-
-    return res.json({
-      success: true,
-      data: {
-        stats: {
-          totalUsers,
-          activeMemberships,
-          bookings: { pendingPayment: pendingBookings, confirmed: confirmedBookings },
-          giftsCompleted: completedGifts,
-          postsPendingApproval: pendingPosts
-        },
-        revenue: {
-          currency: "USD",
-          total: totalRevenue,
-          transactions: totalTransactions,
-          byType: revenueByType
-        }
-      }
-    });
+    return res.json({ success: true, data: { stats: { totalUsers, activeMemberships, bookings: { pendingPayment: pendingBookings, confirmed: confirmedBookings }, giftsCompleted: completedGifts, postsPendingApproval: pendingPosts }, revenue: { currency: "USD", total: totalRevenue, transactions: totalTransactions, byType: revenueByType } } });
   } catch (e) {
     console.error("Admin dashboard stats error:", e);
     return res.status(500).json({ success: false, message: "Unable to retrieve dashboard statistics." });
@@ -85,6 +61,9 @@ const getUsers = async (req, res) => {
 
 const updateUser = async (req, res) => {
   try {
+    if (String(req.params.id) === String(req.user._id) && req.body.role && req.body.role !== "ADMIN") {
+      return res.status(400).json({ success: false, message: "You cannot remove administrator privileges from your own account." });
+    }
     const user = await User.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true }).select("-password");
     if (!user) return res.status(404).json({ success: false, message: "User not found." });
     return res.json({ success: true, data: user });
@@ -95,6 +74,9 @@ const updateUser = async (req, res) => {
 
 const setUserActiveStatus = async (req, res) => {
   try {
+    if (String(req.params.id) === String(req.user._id)) {
+      return res.status(400).json({ success: false, message: "You cannot disable your own administrator account." });
+    }
     const user = await User.findByIdAndUpdate(req.params.id, { isActive: Boolean(req.body.isActive) }, { new: true }).select("-password");
     if (!user) return res.status(404).json({ success: false, message: "User not found." });
     return res.json({ success: true, data: user });
@@ -109,19 +91,15 @@ const deleteUser = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid user id." });
     }
 
-    if (req.params.id === String(req.user._id)) {
+    if (String(req.params.id) === String(req.user._id)) {
       return res.status(400).json({ success: false, message: "You cannot delete your own administrator account." });
     }
 
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ success: false, message: "User not found." });
-    if (user.role === "ADMIN") {
-      return res.status(400).json({ success: false, message: "Administrator accounts cannot be deleted. Disable the account instead." });
-    }
 
-    // Delete all user-owned records first. Posts and comments use `author`, not `user`.
-    // These operations intentionally do not require a MongoDB transaction so deletion
-    // also works with local MongoDB instances that are not configured as replica sets.
+    // Other administrator accounts, including test/admin accounts, may be deleted.
+    // The currently authenticated administrator is the only protected account here.
     await Membership.deleteMany({ user: user._id });
     await Booking.deleteMany({ user: user._id });
     await GiftTransaction.deleteMany({ user: user._id });
@@ -231,7 +209,7 @@ const updateMembershipPlan = async (req, res) => {
     return res.json({ success: true, data: { plan } });
   } catch (e) {
     return res.status(500).json({ success: false, message: "Unable to update membership plan." });
-  }
+    }
 };
 
 const getMeetingTypesAdmin = async (req, res) => {
@@ -256,7 +234,7 @@ const updateMeetingType = async (req, res) => {
 
 const getPendingPosts = async (req, res) => {
   try {
-    return res.json({ success: true, data: { posts: await Post.find({ status: "PENDING" }).populate("user", "name email").sort({ createdAt: -1 }) } });
+    return res.json({ success: true, data: { posts: await Post.find({ status: "PENDING" }).populate("author", "name email username").sort({ createdAt: -1 }) } });
   } catch (e) {
     return res.status(500).json({ success: false, message: "Unable to retrieve pending posts." });
   }
