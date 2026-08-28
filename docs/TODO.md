@@ -45,6 +45,7 @@
 - [ ] Add stale pending-payment cleanup
 - [ ] Add administrative audit log
 - [x] Fix admin user deletion and associated-data cleanup
+- [x] Allow deletion of other administrator/test accounts while protecting the current admin
 - [x] Return populated author data when creating posts
 
 ## Frontend
