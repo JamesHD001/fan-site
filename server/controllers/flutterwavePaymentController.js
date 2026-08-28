@@ -11,12 +11,10 @@ const MAX_DEPOSIT_USD_CENTS = Number(process.env.MAX_DEPOSIT_USD_CENTS || 100000
 const generateReference = () =>
   `DEP-${Date.now()}-${crypto.randomBytes(6).toString("hex").toUpperCase()}`;
 
-// Flutterwave transaction ids are numeric strings; reject anything else before
-// it is interpolated into the verify URL path.
 const isValidProviderTransactionId = (value) => /^\d{1,20}$/.test(String(value));
 
 const respondReviewRequired = (res, payment, message) =>
-  res.status(409).json({
+  res.status(200).json({
     success: false,
     message,
     requiresReview: true,
@@ -37,11 +35,15 @@ const createFlutterwaveDeposit = async (req, res) => {
       });
     }
 
-    // Fetch Flutterwave's current USD/NGN rate at initialization time and lock
-    // the resulting NGN charge on the payment record. Verification never
-    // recalculates the rate, so a later FX movement cannot change the payment.
-    const exchangeRate = await getUsdToNgnRate();
-    const providerAmount = Math.ceil((originalAmount / 100) * exchangeRate);
+    // Use Flutterwave's supported USD/NGN reference rate. The exact snapshot
+    // used here is locked to this payment and is never recalculated at verify time.
+    const rateSnapshot = await getUsdToNgnRate();
+    const exchangeRate = rateSnapshot.rate;
+    const providerAmountMajor = Math.ceil((originalAmount / 100) * exchangeRate);
+    // Payment.amount is stored in provider minor units (NGN kobo), matching the
+    // Payment model contract. Flutterwave checkout receives the corresponding
+    // major-unit amount.
+    const providerAmountMinor = providerAmountMajor * 100;
     const reference = generateReference();
 
     const payment = await Payment.create({
@@ -50,17 +52,23 @@ const createFlutterwaveDeposit = async (req, res) => {
       type: "DEPOSIT",
       originalAmount,
       originalCurrency: "USD",
-      amount: providerAmount,
+      amount: providerAmountMinor,
       currency: "NGN",
       exchangeRate,
       provider: "FLUTTERWAVE",
       status: "PENDING",
-      metadata: { purpose: "PLATFORM_CREDIT_DEPOSIT", feePolicy: "MERCHANT_ABSORBS_PROVIDER_FEES", rateSource: "FLUTTERWAVE_TRANSFER_RATES" },
+      metadata: {
+        purpose: "PLATFORM_CREDIT_DEPOSIT",
+        feePolicy: "MERCHANT_ABSORBS_PROVIDER_FEES",
+        rateSource: "FLUTTERWAVE_TRANSFER_RATES",
+        rateFetchedAt: rateSnapshot.fetchedAt.toISOString(),
+        rateWasStale: Boolean(rateSnapshot.stale),
+      },
     });
 
     try {
       const checkout = initializeDeposit({
-        amountMajor: providerAmount,
+        amountMajor: providerAmountMajor,
         currency: "NGN",
         reference,
         email: req.user.email,
@@ -69,7 +77,15 @@ const createFlutterwaveDeposit = async (req, res) => {
       });
       payment.providerResponse = checkout;
       await payment.save();
-      return res.status(201).json({ success: true, paymentId: payment._id, reference, checkout, exchangeRate, providerAmount });
+      return res.status(201).json({
+        success: true,
+        paymentId: payment._id,
+        reference,
+        checkout,
+        exchangeRate,
+        providerAmount: providerAmountMajor,
+        providerAmountMinor,
+      });
     } catch (error) {
       payment.status = "FAILED";
       payment.providerResponse = { message: error.message };
@@ -109,11 +125,10 @@ const verifyFlutterwavePayment = async (req, res) => {
       return res.json({ success: true, alreadyProcessed: true, walletCredited: true });
     }
 
+    applyProviderTransactionDetails(payment, transaction);
+    payment.providerResponse = transaction;
+
     if (String(transaction.currency).toUpperCase() !== String(payment.currency).toUpperCase()) {
-      applyProviderTransactionDetails(payment, transaction);
-      payment.providerResponse = transaction;
-      // The customer really paid — never silently discard the record. Flag for
-      // manual reconciliation instead of auto-FAILED.
       payment.status = "REQUIRES_REVIEW";
       payment.metadata = { ...payment.metadata, reviewReason: "CURRENCY_MISMATCH", expectedCurrency: payment.currency, receivedCurrency: transaction.currency };
       await payment.save({ session });
@@ -121,22 +136,17 @@ const verifyFlutterwavePayment = async (req, res) => {
       return respondReviewRequired(res, payment, "Payment currency mismatch. This payment has been flagged for review.");
     }
 
-    // Compare provider-to-provider. Provider fees/taxes are settlement deductions,
-    // not deductions from the amount the customer successfully paid.
-    const expectedProviderAmount = Number(payment.amount);
-    const receivedProviderAmount = Math.round(Number(transaction.amount));
-    if (!Number.isFinite(receivedProviderAmount) || receivedProviderAmount !== expectedProviderAmount) {
-      applyProviderTransactionDetails(payment, transaction);
-      payment.providerResponse = transaction;
+    // Compare provider amount in the same units: Flutterwave returns NGN major
+    // units while Payment.amount is stored in NGN minor units (kobo).
+    const expectedProviderAmountMinor = Number(payment.amount);
+    const receivedProviderAmountMinor = Math.round(Number(transaction.amount) * 100);
+    if (!Number.isFinite(receivedProviderAmountMinor) || receivedProviderAmountMinor !== expectedProviderAmountMinor) {
       payment.status = "REQUIRES_REVIEW";
-      payment.metadata = { ...payment.metadata, reviewReason: "AMOUNT_MISMATCH", expectedProviderAmount, receivedProviderAmount };
+      payment.metadata = { ...payment.metadata, reviewReason: "AMOUNT_MISMATCH", expectedProviderAmountMinor, receivedProviderAmountMinor };
       await payment.save({ session });
       await session.commitTransaction();
       return respondReviewRequired(res, payment, "Payment amount mismatch. This payment has been flagged for review.");
     }
-
-    // Preserve fee/tax fields when the provider exposes them; these do not affect wallet credit.
-    applyProviderTransactionDetails(payment, transaction);
 
     const settlement = await settleSuccessfulPayment({ paymentId: payment._id, transaction, session });
     await session.commitTransaction();
