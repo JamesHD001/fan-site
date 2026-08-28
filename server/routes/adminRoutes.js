@@ -3,9 +3,11 @@ const {
   getDashboardStats, getUsers, updateUser, setUserActiveStatus, getPayments,
   getBookings, updateBookingStatus, getGiftTransactions, updateGiftStatus,
   getGiftsAdmin, updateGift, getMembershipPlansAdmin, updateMembershipPlan,
-  getMeetingTypesAdmin, updateMeetingType, getPendingPosts, moderatePost,
-  sendAnnouncement,
-} = require("../controllers/adminController");
+  getMeetingTypesAdmin, updateMeetingType,   getPendingPosts,
+    moderatePost,
+    sendAnnouncement,
+    resolvePaymentReview,
+  } = require("../controllers/adminController");
 const {
   listPlans, createPlan, updatePlan, deletePlan,
   listMeetings, createMeeting, updateMeeting, deleteMeeting,
@@ -21,6 +23,7 @@ router.get("/dashboard", getDashboardStats);
 router.get("/users", getUsers);
 router.patch("/users/:id", updateUser);
 router.patch("/users/:id/status", setUserActiveStatus);
+router.patch("/payments/:id/review", resolvePaymentReview);
 router.get("/payments", getPayments);
 router.get("/bookings", getBookings);
 router.patch("/bookings/:id/status", updateBookingStatus);

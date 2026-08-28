@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const User = require("../models/User");
 const Membership = require("../models/Membership");
 const Booking = require("../models/Booking");
@@ -86,8 +87,26 @@ const getDashboardStats = async (req, res) => {
 
 const getUsers = async (req, res) => {
   try {
-    const users = await User.find().select("-password").sort({ createdAt: -1 });
-    return res.json({ success: true, data: users });
+    // Returns ALL users — registered, unverified, disabled and test accounts
+    // alike. No status filter is applied by default.
+    const query = {};
+    const search = String(req.query.search || "").trim();
+    if (search) {
+      const rx = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      query.$or = [{ name: rx }, { username: rx }, { email: rx }];
+    }
+
+    const page = Math.max(Number(req.query.page) || 1, 1);
+    const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100);
+    const [users, total] = await Promise.all([
+      User.find(query).select("-password").sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
+      User.countDocuments(query),
+    ]);
+
+    return res.json({
+      success: true,
+      data: { users, pagination: { page, limit, total, pages: Math.ceil(total / limit) || 1 } },
+    });
   } catch (e) {
     return res.status(500).json({ success: false, message: "Unable to retrieve users." });
   }
@@ -122,7 +141,9 @@ const setUserActiveStatus = async (req, res) => {
 
 const getPayments = async (req, res) => {
   try {
-    const payments = await Payment.find().populate("user", "name email").sort({ createdAt: -1 });
+    const query = {};
+    if (req.query.status) query.status = req.query.status;
+    const payments = await Payment.find(query).populate("user", "name email").sort({ createdAt: -1 });
     return res.json({ success: true, data: payments });
   } catch (e) {
     return res.status(500).json({ success: false, message: "Unable to retrieve payments." });
@@ -257,6 +278,66 @@ const sendAnnouncement = async (req, res) => {
   }
 };
 
+const resolvePaymentReview = async (req, res) => {
+  try {
+    const { resolution } = req.body;
+    if (!['CREDIT_AS_PAID', 'VOID'].includes(resolution)) {
+      return res.status(400).json({ success: false, message: "Resolution must be CREDIT_AS_PAID or VOID." });
+    }
+
+    const payment = await Payment.findById(req.params.id);
+    if (!payment) return res.status(404).json({ success: false, message: "Payment not found." });
+    if (payment.status !== "REQUIRES_REVIEW") {
+      return res.status(400).json({ success: false, message: `Payment is ${payment.status}, not awaiting review.` });
+    }
+
+    if (resolution === "VOID") {
+      payment.status = "REFUNDED";
+      payment.metadata = { ...payment.metadata, reviewResolvedAt: new Date().toISOString(), reviewResolvedBy: req.user._id.toString(), reviewResolution: "VOID" };
+      await payment.save();
+      return res.json({ success: true, data: payment });
+    }
+
+    // CREDIT_AS_PAID: honor the customer's payment despite the mismatch.
+    if (payment.type === "DEPOSIT") {
+      const session = await mongoose.startSession();
+      session.startTransaction();
+      try {
+        const { creditWallet } = require("../services/walletService");
+        await creditWallet({
+          userId: payment.user,
+          amount: payment.originalAmount,
+          type: "DEPOSIT",
+          reference: `WAL-${payment.reference}`,
+          paymentId: payment._id,
+          description: "Wallet funding deposit (approved after review)",
+          session,
+        });
+        payment.status = "SUCCESS";
+        payment.paidAt = new Date();
+        payment.metadata = { ...payment.metadata, reviewResolvedAt: new Date().toISOString(), reviewResolvedBy: req.user._id.toString(), reviewResolution: "CREDIT_AS_PAID" };
+        await payment.save({ session });
+        await session.commitTransaction();
+      } catch (error) {
+        if (session.inTransaction()) await session.abortTransaction();
+        throw error;
+      } finally {
+        await session.endSession();
+      }
+    } else {
+      // Non-deposit types (membership/meeting/gift) require domain-side
+      // activation which settlement owns; surface this to the admin instead
+      // of silently mis-activating.
+      return res.status(400).json({ success: false, message: `CREDIT_AS_PAID is only supported for DEPOSIT payments. This payment is ${payment.type}.` });
+    }
+
+    return res.json({ success: true, data: payment });
+  } catch (e) {
+    console.error("Resolve payment review error:", e);
+    return res.status(500).json({ success: false, message: "Unable to resolve payment review." });
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getUsers,
@@ -276,4 +357,5 @@ module.exports = {
   getPendingPosts,
   moderatePost,
   sendAnnouncement,
+  resolvePaymentReview,
 };
