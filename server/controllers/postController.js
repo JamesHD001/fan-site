@@ -9,10 +9,7 @@ const Comment = require("../models/Comment");
 const getPosts = async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = Math.min(
-      50,
-      parseInt(req.query.limit) || 10
-    );
+    const limit = Math.min(50, parseInt(req.query.limit) || 10);
     const skip = (page - 1) * limit;
 
     const query = { status: "APPROVED" };
@@ -36,38 +33,28 @@ const getPosts = async (req, res) => {
 
     const postIds = posts.map((p) => p._id);
 
-    const [likeCounts, commentCounts, likedByMe] =
-      await Promise.all([
-        Like.aggregate([
-          { $match: { post: { $in: postIds } } },
-          { $group: { _id: "$post", count: { $sum: 1 } } },
-        ]),
-        Comment.aggregate([
-          {
-            $match: {
-              post: { $in: postIds },
-              status: "APPROVED",
-            },
-          },
-          { $group: { _id: "$post", count: { $sum: 1 } } },
-        ]),
-        req.user
-          ? Like.find({
-            user: req.user._id,
+    const [likeCounts, commentCounts, likedByMe] = await Promise.all([
+      Like.aggregate([
+        { $match: { post: { $in: postIds } } },
+        { $group: { _id: "$post", count: { $sum: 1 } } },
+      ]),
+      Comment.aggregate([
+        {
+          $match: {
             post: { $in: postIds },
-          }).distinct("post")
-          : Promise.resolve([]),
-      ]);
+            status: "APPROVED",
+          },
+        },
+        { $group: { _id: "$post", count: { $sum: 1 } } },
+      ]),
+      req.user
+        ? Like.find({ user: req.user._id, post: { $in: postIds } }).distinct("post")
+        : Promise.resolve([]),
+    ]);
 
-    const likeMap = new Map(
-      likeCounts.map((l) => [String(l._id), l.count])
-    );
-    const commentMap = new Map(
-      commentCounts.map((c) => [String(c._id), c.count])
-    );
-    const likedSet = new Set(
-      likedByMe.map((id) => String(id))
-    );
+    const likeMap = new Map(likeCounts.map((l) => [String(l._id), l.count]));
+    const commentMap = new Map(commentCounts.map((c) => [String(c._id), c.count]));
+    const likedSet = new Set(likedByMe.map((id) => String(id)));
 
     return res.status(200).json({
       success: true,
@@ -75,8 +62,7 @@ const getPosts = async (req, res) => {
         posts: posts.map((post) => ({
           ...post.toObject(),
           likeCount: likeMap.get(String(post._id)) || 0,
-          commentCount:
-            commentMap.get(String(post._id)) || 0,
+          commentCount: commentMap.get(String(post._id)) || 0,
           likedByMe: likedSet.has(String(post._id)),
         })),
         pagination: {
@@ -89,11 +75,7 @@ const getPosts = async (req, res) => {
     });
   } catch (error) {
     console.error("Get posts error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Unable to retrieve posts.",
-    });
+    return res.status(500).json({ success: false, message: "Unable to retrieve posts." });
   }
 };
 
@@ -104,43 +86,27 @@ const getPostById = async (req, res) => {
       .populate("celebrity", "name slug profileImage");
 
     if (!post) {
-      return res.status(404).json({
-        success: false,
-        message: "Post not found.",
-      });
+      return res.status(404).json({ success: false, message: "Post not found." });
     }
 
-    const isOwner =
-      req.user &&
-      post.author._id.toString() ===
-      req.user._id.toString();
+    const isOwner = req.user && post.author._id.toString() === req.user._id.toString();
 
     if (
       post.status !== "APPROVED" &&
       !isOwner &&
       (!req.user || req.user.role !== "ADMIN")
     ) {
-      return res.status(404).json({
-        success: false,
-        message: "Post not found.",
-      });
+      return res.status(404).json({ success: false, message: "Post not found." });
     }
 
     const [likeCount, commentCount] = await Promise.all([
       Like.countDocuments({ post: post._id }),
-      Comment.countDocuments({
-        post: post._id,
-        status: "APPROVED",
-      }),
+      Comment.countDocuments({ post: post._id, status: "APPROVED" }),
     ]);
 
     let likedByMe = false;
-
     if (req.user) {
-      likedByMe = !!(await Like.exists({
-        user: req.user._id,
-        post: post._id,
-      }));
+      likedByMe = !!(await Like.exists({ user: req.user._id, post: post._id }));
     }
 
     return res.status(200).json({
@@ -156,11 +122,7 @@ const getPostById = async (req, res) => {
     });
   } catch (error) {
     console.error("Get post error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Unable to retrieve post.",
-    });
+    return res.status(500).json({ success: false, message: "Unable to retrieve post." });
   }
 };
 
@@ -175,19 +137,20 @@ const createPost = async (req, res) => {
       image: image || "",
     });
 
+    // Populate the author before returning the newly-created post. The
+    // community page immediately renders this response without reloading,
+    // so returning only the ObjectId would make the UI fall back to "Fan".
+    await post.populate("author", "name username profileImage");
+    await post.populate("celebrity", "name slug profileImage");
+
     return res.status(201).json({
       success: true,
-      message:
-        "Post created. It will be visible once approved.",
+      message: "Post created. It will be visible once approved.",
       data: { post },
     });
   } catch (error) {
     console.error("Create post error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Unable to create post.",
-    });
+    return res.status(500).json({ success: false, message: "Unable to create post." });
   }
 };
 
@@ -196,31 +159,21 @@ const updatePost = async (req, res) => {
     const post = await Post.findById(req.params.id);
 
     if (!post) {
-      return res.status(404).json({
-        success: false,
-        message: "Post not found.",
-      });
+      return res.status(404).json({ success: false, message: "Post not found." });
     }
 
-    const isOwner =
-      post.author.toString() === req.user._id.toString();
+    const isOwner = post.author.toString() === req.user._id.toString();
     const isAdmin = req.user.role === "ADMIN";
 
     if (!isOwner && !isAdmin) {
-      return res.status(403).json({
-        success: false,
-        message:
-          "You are not allowed to update this post.",
-      });
+      return res.status(403).json({ success: false, message: "You are not allowed to update this post." });
     }
 
     const { title, content, image } = req.body;
-
     if (title !== undefined) post.title = title;
     if (content !== undefined) post.content = content;
     if (image !== undefined) post.image = image;
 
-    // Editing resets approval for non-admins
     if (isOwner && !isAdmin && post.status !== "PENDING") {
       post.status = "PENDING";
     }
@@ -234,11 +187,7 @@ const updatePost = async (req, res) => {
     });
   } catch (error) {
     console.error("Update post error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Unable to update post.",
-    });
+    return res.status(500).json({ success: false, message: "Unable to update post." });
   }
 };
 
@@ -247,22 +196,14 @@ const deletePost = async (req, res) => {
     const post = await Post.findById(req.params.id);
 
     if (!post) {
-      return res.status(404).json({
-        success: false,
-        message: "Post not found.",
-      });
+      return res.status(404).json({ success: false, message: "Post not found." });
     }
 
-    const isOwner =
-      post.author.toString() === req.user._id.toString();
+    const isOwner = post.author.toString() === req.user._id.toString();
     const isAdmin = req.user.role === "ADMIN";
 
     if (!isOwner && !isAdmin) {
-      return res.status(403).json({
-        success: false,
-        message:
-          "You are not allowed to delete this post.",
-      });
+      return res.status(403).json({ success: false, message: "You are not allowed to delete this post." });
     }
 
     await Promise.all([
@@ -271,17 +212,10 @@ const deletePost = async (req, res) => {
       Like.deleteMany({ post: post._id }),
     ]);
 
-    return res.status(200).json({
-      success: true,
-      message: "Post deleted successfully.",
-    });
+    return res.status(200).json({ success: true, message: "Post deleted successfully." });
   } catch (error) {
     console.error("Delete post error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Unable to delete post.",
-    });
+    return res.status(500).json({ success: false, message: "Unable to delete post." });
   }
 };
 
