@@ -1,46 +1,11 @@
 const express = require("express");
-
-const {
-  getMeetingTypes,
-  getMyBookings,
-  initializeBookingPayment,
-} = require("../controllers/meetingController");
-
-const {
-  verifyBookingPayment,
-  cancelBooking,
-} = require("../controllers/bookingController");
-
+const { getMeetingTypes, getMyBookings } = require("../controllers/meetingController");
+const { cancelBooking } = require("../controllers/bookingController");
+const { requestPayment } = require("../controllers/manualPaymentController");
 const authenticate = require("../middleware/authenticate");
-
 const router = express.Router();
-
-// Meeting types (public catalog)
 router.get("/types", getMeetingTypes);
-
-// Bookings
-router.get(
-  "/bookings",
-  authenticate,
-  getMyBookings
-);
-
-router.post(
-  "/bookings/initialize",
-  authenticate,
-  initializeBookingPayment
-);
-
-router.post(
-  "/bookings/verify",
-  authenticate,
-  verifyBookingPayment
-);
-
-router.patch(
-  "/bookings/:id/cancel",
-  authenticate,
-  cancelBooking
-);
-
+router.get("/bookings", authenticate, getMyBookings);
+router.post("/bookings/initialize", authenticate, (req, res) => { req.body.type = "MEETING"; req.body.itemId = req.body.meetingTypeId; return requestPayment(req, res); });
+router.patch("/bookings/:id/cancel", authenticate, cancelBooking);
 module.exports = router;
