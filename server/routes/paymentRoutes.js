@@ -1,18 +1,13 @@
 const express = require("express");
-
 const authenticate = require("../middleware/authenticate");
-const { verifyPayment } = require("../controllers/paymentController");
-const {
-  createFlutterwaveDeposit,
-  verifyFlutterwavePayment,
-  createSavedCardDeposit,
-} = require("../controllers/flutterwavePaymentController");
+const requireAdmin = require("../middleware/adminMiddleware");
+const { requestPayment, getMyPayment, getPaymentSupport, confirmPayment, listPendingPayments } = require("../controllers/manualPaymentController");
 
 const router = express.Router();
-
-router.post("/verify", authenticate, verifyPayment);
-router.post("/flutterwave/deposits", authenticate, createFlutterwaveDeposit);
-router.post("/flutterwave/deposits/verify", authenticate, verifyFlutterwavePayment);
-router.post("/flutterwave/deposits/saved-card", authenticate, createSavedCardDeposit);
+router.get("/support", getPaymentSupport);
+router.post("/request", authenticate, requestPayment);
+router.get("/mine/:token", authenticate, getMyPayment);
+router.get("/admin/pending", authenticate, requireAdmin, listPendingPayments);
+router.patch("/admin/:id/confirm", authenticate, requireAdmin, confirmPayment);
 
 module.exports = router;
