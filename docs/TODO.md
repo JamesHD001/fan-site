@@ -63,10 +63,14 @@
 - [x] Add member profile photo upload, client-side crop and resize
 - [x] Show uploaded member photo on membership card while retaining initials fallback
 - [x] Fix membership card print isolation and full-color print styling
+- [x] Add five-tier membership card visual hierarchy
+- [x] Give each membership tier a distinct card design treatment
+- [x] Add VIP celebrity-edition monogram treatment
 - [ ] Accessibility review
 
 ## Product features
 - [x] Membership dashboard and digital card UI
+- [x] Five membership tiers: Supporter, Insider, Premier, Elite, VIP
 - [x] Meeting availability/calendar UI
 - [x] Gift history and gifting UX
 - [x] Notification center
