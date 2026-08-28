@@ -159,7 +159,7 @@ export default function AdminPaymentConfigPage() {
         <section className="admin-config-sections">
           <article className="admin-config-panel">
             <div className="admin-config-panel-header">
-              <div><p className="eyebrow">01 / CRYPTO</p><h2>Crypto wallets</h2><p className="muted">Configure the coin, network and receiving wallet members should use.</p></div>
+              <div><p className="eyebrow">1 | CRYPTO</p><h2>Crypto wallets</h2><p className="muted">Configure the coin, network and receiving wallet members should use.</p></div>
               <span className="admin-config-count">{cryptoOptions.length} configured</span>
             </div>
             <div className="admin-config-content">
@@ -190,7 +190,7 @@ export default function AdminPaymentConfigPage() {
 
           <article className="admin-config-panel">
             <div className="admin-config-panel-header">
-              <div><p className="eyebrow">02 / GIFT CARDS</p><h2>Gift-card payments</h2><p className="muted">Configure accepted brands and the instructions members receive.</p></div>
+              <div><p className="eyebrow">2 | GIFT CARDS</p><h2>Gift-card payments</h2><p className="muted">Configure accepted brands and the instructions members receive.</p></div>
               <span className="admin-config-count">{giftCardOptions.length} configured</span>
             </div>
             <div className="admin-config-content">
