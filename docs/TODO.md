@@ -22,17 +22,17 @@
 - [ ] Complete payment integration tests
 
 ## Payment architecture
-- [ ] Implement Flutterwave provider
-- [ ] Implement Flutterwave initialization and verification
-- [ ] Implement Flutterwave webhook handling
-- [ ] Implement wallet funding/deposit flow
-- [ ] Add deposit UI
+- [x] Implement Flutterwave provider
+- [x] Implement Flutterwave initialization and verification
+- [x] Implement Flutterwave webhook handling
+- [x] Implement wallet funding/deposit flow
+- [x] Add deposit UI
 - [ ] Migrate membership purchases to platform credits
 - [ ] Migrate meeting purchases to platform credits
 - [ ] Migrate gifts to platform credits
 - [ ] Apply platform-credit protection to all purchasable items
 - [ ] Implement refunds/reversals
-- [ ] Add payment reconciliation tools
+- [x] Add payment reconciliation tools
 - [ ] Investigate Bybit Pay merchant/API integration
 - [ ] Implement crypto funding (BTC/USDT/USDC/BNB)
 - [ ] Retire Paystack after successful Flutterwave migration
@@ -42,7 +42,10 @@
 - [ ] Add authentication/payment rate limiting
 - [ ] Add environment configuration validation
 - [ ] Add stale pending-payment cleanup
-- [ ] Improve exchange-rate timeout/caching
+- [x] Improve exchange-rate timeout/caching and lock the Flutterwave reference-rate snapshot per payment
+- [x] Record provider fee/tax/settlement details without reducing customer payment validation
+- [x] Acknowledge Flutterwave `REQUIRES_REVIEW` webhook outcomes with HTTP 200
+- [x] Guard against provider transaction IDs being claimed by another payment
 - [ ] Add audit logging for administrative actions
 
 ## Frontend
@@ -50,7 +53,7 @@
 - [x] Protected routes
 - [x] Generic payment callback
 - [ ] Wallet balance UI
-- [ ] Add-funds UI
+- [x] Add-funds UI
 - [ ] Wallet transaction history UI
 - [ ] Centralize API client
 - [ ] Refactor App.jsx into route/layout modules
