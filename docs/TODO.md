@@ -58,7 +58,7 @@
 - [x] Replace proof URL/data-URL persistence with protected stored-file retrieval
 - [ ] Add payment configuration management UI
 - [ ] Centralize API client
-- [ ] Complete responsive UI
+- [x] Complete responsive membership card layout
 - [x] Harden membership card responsive layout and prevent detail overlap
 - [x] Add member profile photo upload, client-side crop and resize
 - [x] Show uploaded member photo on membership card while retaining initials fallback
