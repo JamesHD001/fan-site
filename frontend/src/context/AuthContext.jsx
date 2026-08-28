@@ -18,35 +18,21 @@ export function AuthProvider({ children }) {
     }
 
     let cancelled = false
-
     const loadUser = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+        const response = await fetch(`${API_BASE_URL}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
         const data = await response.json()
-
-        if (!response.ok || !data.success) {
-          throw new Error(data.message || 'Authentication expired.')
-        }
-
+        if (!response.ok || !data.success) throw new Error(data.message || 'Authentication expired.')
         if (!cancelled) setUser(data.user)
       } catch {
         localStorage.removeItem(TOKEN_KEY)
-        if (!cancelled) {
-          setToken(null)
-          setUser(null)
-        }
+        if (!cancelled) { setToken(null); setUser(null) }
       } finally {
         if (!cancelled) setLoading(false)
       }
     }
-
     loadUser()
-
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [token])
 
   const login = (newToken, newUser) => {
@@ -56,21 +42,15 @@ export function AuthProvider({ children }) {
     setLoading(false)
   }
 
+  const updateUser = (nextUser) => setUser(nextUser || null)
+
   const logout = () => {
     localStorage.removeItem(TOKEN_KEY)
     setToken(null)
     setUser(null)
   }
 
-  const value = useMemo(() => ({
-    token,
-    user,
-    loading,
-    isAuthenticated: Boolean(token && user),
-    login,
-    logout,
-  }), [token, user, loading])
-
+  const value = useMemo(() => ({ token, user, loading, isAuthenticated: Boolean(token && user), login, updateUser, logout }), [token, user, loading])
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
