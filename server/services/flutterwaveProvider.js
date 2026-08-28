@@ -40,20 +40,20 @@ const createPayloadHash = ({ amount, currency, email, reference }) => {
 };
 
 /**
- * Fetch Flutterwave's current USD -> NGN transfer rate.
+ * Fetch Flutterwave's supported USD -> NGN reference rate.
  *
- * The V3 transfer-rates endpoint returns the rate applicable to the requested
- * currency pair. We query a representative NGN destination amount and use
- * data.rate, which Flutterwave documents as the destination-currency amount
- * required for one unit of the source currency.
+ * This is deliberately described as a provider reference rate, not a live
+ * market quote. Flutterwave's transfer-rates endpoint is the source used for
+ * the platform conversion and the resulting rate is locked on each payment.
+ *
+ * Returns both the rate and the timestamp actually associated with the cached
+ * value so the payment record can preserve an auditable FX snapshot.
  */
 const getUsdToNgnRate = async () => {
-  // Short-lived cache: the rate only needs to be directionally fresh at deposit
-  // init time (it is locked on the payment record anyway). Reduces provider
-  // load and keeps deposits flowing when the rates endpoint is degraded.
   const TTL_MS = Number(process.env.FX_RATE_CACHE_TTL_MS || 5 * 60 * 1000);
-  if (rateCache.value !== null && Date.now() - rateCache.fetchedAt < TTL_MS) {
-    return rateCache.value;
+  const now = Date.now();
+  if (rateCache.value !== null && now - rateCache.fetchedAt < TTL_MS) {
+    return { rate: rateCache.value, fetchedAt: new Date(rateCache.fetchedAt) };
   }
 
   const params = new URLSearchParams({
@@ -69,12 +69,10 @@ const getUsdToNgnRate = async () => {
       signal: AbortSignal.timeout(Number(process.env.FX_RATE_TIMEOUT_MS || 8000)),
     });
   } catch (error) {
-    // Stale-but-served fallback: better than blocking all deposits if Flutterwave's
-    // rates endpoint is down. Staleness is bounded by the fallback max age.
     const maxStaleMs = Number(process.env.FX_RATE_MAX_STALE_MS || 24 * 60 * 60 * 1000);
-    if (rateCache.value !== null && Date.now() - rateCache.fetchedAt < maxStaleMs) {
+    if (rateCache.value !== null && now - rateCache.fetchedAt < maxStaleMs) {
       console.warn("Flutterwave rate fetch failed; serving cached rate.", error.message);
-      return rateCache.value;
+      return { rate: rateCache.value, fetchedAt: new Date(rateCache.fetchedAt), stale: true };
     }
     throw error;
   }
@@ -83,9 +81,10 @@ const getUsdToNgnRate = async () => {
   if (!Number.isFinite(rate) || rate <= 0) {
     throw new Error("Flutterwave returned an invalid USD/NGN exchange rate.");
   }
+
   rateCache.value = rate;
   rateCache.fetchedAt = Date.now();
-  return rate;
+  return { rate, fetchedAt: new Date(rateCache.fetchedAt), stale: false };
 };
 
 const initializeDeposit = ({ reference, email, name, amountMajor, currency = "NGN", metadata = {} }) => {
@@ -105,8 +104,6 @@ const verifyDeposit = async (transactionId) => {
   return request(`/transactions/${encodeURIComponent(transactionId)}/verify`, { method: "GET" });
 };
 
-// Retrieves the provider fee quote where supported. Fees are accounting data;
-// they must never be used to reduce the verified customer payment amount.
 const getTransactionFee = async ({ amount, currency = "NGN", paymentType = "card", cardFirstSix }) => {
   const params = new URLSearchParams({ amount: String(amount), currency, payment_type: paymentType });
   if (cardFirstSix) params.set("card_first_6digits", String(cardFirstSix));
