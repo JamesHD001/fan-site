@@ -1,4 +1,5 @@
 import './MembershipCard.css'
+import keanuSignature from '../../assets/Keanu_Reeves_Signature.svg'
 
 const tierClass = (card = {}) => {
   const design = card.cardDesign || card.membershipType || 'supporter'
@@ -34,7 +35,7 @@ export default function MembershipCard({ card, onPrint }) {
   const membershipType = card?.membershipType || meta.accent
 
   return (
-    <div className="membership-card-wrap">
+    <div className="membership-card-wrap" style={{ width: 'min(100%, 900px)', justifySelf: 'center' }}>
       <article
         className={`digital-membership-card digital-card-${tier}`}
         aria-label={`${membershipType} digital membership card`}
@@ -71,9 +72,32 @@ export default function MembershipCard({ card, onPrint }) {
         {tier === 'premier' && <div className="digital-card-seal" aria-hidden="true"><span>KR</span><small>PREMIER</small></div>}
         {tier === 'elite' && <div className="digital-card-elite-stripe" aria-hidden="true" />}
         {tier === 'vip' && (
-          <div className="digital-card-celebrity-mark" aria-label="Celebrity edition monogram">
-            <span>KR</span>
-            <small>CELEBRITY EDITION</small>
+          <div
+            className="digital-card-celebrity-mark"
+            aria-label="Keanu Reeves signature"
+            style={{
+              position: 'absolute',
+              right: '7%',
+              top: '25%',
+              width: 'clamp(115px, 20%, 180px)',
+              zIndex: 4,
+              transform: 'rotate(-6deg)',
+            }}
+          >
+            <img
+              className="digital-card-signature"
+              src={keanuSignature}
+              alt="Keanu Reeves signature"
+              style={{
+                display: 'block',
+                width: '100%',
+                height: 'auto',
+                filter: 'brightness(0) saturate(100%) invert(76%) sepia(38%) saturate(670%) hue-rotate(359deg) brightness(91%) contrast(87%)',
+              }}
+            />
+            <small style={{ display: 'block', marginTop: '3px', textAlign: 'center', color: '#d5b26d', fontSize: '5px', letterSpacing: '.2em' }}>
+              CELEBRITY EDITION
+            </small>
           </div>
         )}
 
