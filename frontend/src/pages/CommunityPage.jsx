@@ -4,6 +4,9 @@ import { useAuth } from '../context/AuthContext'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
+const getAuthorName = (author) => author?.name || author?.username || 'Fan'
+const getAuthorUsername = (author) => author?.username ? `@${author.username}` : ''
+
 export default function CommunityPage() {
   const { token, user } = useAuth()
   const [posts, setPosts] = useState([])
@@ -18,7 +21,8 @@ export default function CommunityPage() {
     let cancelled = false
     const loadPosts = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/posts`)
+        const headers = token ? { Authorization: `Bearer ${token}` } : {}
+        const response = await fetch(`${API_BASE_URL}/posts`, { headers })
         const data = await response.json()
         if (!response.ok || !data.success) throw new Error(data.message || 'Unable to load community posts.')
         if (!cancelled) setPosts(data.data?.posts || [])
@@ -30,7 +34,7 @@ export default function CommunityPage() {
     }
     loadPosts()
     return () => { cancelled = true }
-  }, [])
+  }, [token])
 
   const loadComments = async (postId) => {
     try {
@@ -83,7 +87,9 @@ export default function CommunityPage() {
 
   const submitPost = async (event) => {
     event.preventDefault()
+    if (!token) return
     setSubmitting(true)
+    setError('')
     try {
       const response = await fetch(`${API_BASE_URL}/posts`, {
         method: 'POST',
@@ -110,7 +116,17 @@ export default function CommunityPage() {
       {user && <form className="post-composer" onSubmit={submitPost}><h2>Share something</h2><input required minLength="3" maxLength="150" placeholder="Post title" value={newPost.title} onChange={(event) => setNewPost({ ...newPost, title: event.target.value })} /><textarea required maxLength="5000" rows="4" placeholder="What would you like to share?" value={newPost.content} onChange={(event) => setNewPost({ ...newPost, content: event.target.value })} /><button className="primary-button" disabled={submitting}>{submitting ? 'Posting…' : 'Create post'}</button></form>}
       {!user && <p className="auth-error"><Link to="/login">Sign in</Link> to create posts, like, and comment.</p>}
       <section className="post-list" aria-label="Community posts">
-        {posts.map((post) => <article className="post-card" key={post._id}><div className="post-meta"><strong>{post.author?.name || post.author?.username || 'Fan'}</strong><span className="muted">{new Date(post.createdAt).toLocaleDateString()}</span>{post.status !== 'APPROVED' && <span className="status-pill">{post.status}</span>}</div><h2>{post.title}</h2><p>{post.content}</p><div className="post-actions"><button className={`action-button${post.likedByMe ? ' action-active' : ''}`} type="button" disabled={!user} onClick={() => toggleLike(post._id)}>♥ {post.likeCount || 0}</button><button className="action-button" type="button" onClick={() => loadComments(post._id)}>Comments {post.commentCount || 0}</button></div>{comments[post._id] && <div className="comments"><ul>{comments[post._id].map((comment) => <li key={comment._id}><strong>{comment.author?.name || 'Fan'}</strong><span>{comment.content}</span></li>)}</ul>{user && <form className="comment-form" onSubmit={(event) => submitComment(event, post._id)}><input required maxLength="1000" placeholder="Write a comment…" value={commentText[post._id] || ''} onChange={(event) => setCommentText({ ...commentText, [post._id]: event.target.value })} /><button className="secondary-button">Send</button></form>}</div>}</article>)}
+        {posts.map((post) => <article className="post-card" key={post._id}>
+          <div className="post-meta">
+            <strong>{getAuthorName(post.author)}</strong>
+            {getAuthorUsername(post.author) && <span className="muted">{getAuthorUsername(post.author)}</span>}
+            <span className="muted">{new Date(post.createdAt).toLocaleDateString()}</span>
+            {post.status !== 'APPROVED' && <span className="status-pill">{post.status}</span>}
+          </div>
+          <h2>{post.title}</h2><p>{post.content}</p>
+          <div className="post-actions"><button className={`action-button${post.likedByMe ? ' action-active' : ''}`} type="button" disabled={!user} onClick={() => toggleLike(post._id)}>♥ {post.likeCount || 0}</button><button className="action-button" type="button" onClick={() => loadComments(post._id)}>Comments {post.commentCount || 0}</button></div>
+          {comments[post._id] && <div className="comments"><ul>{comments[post._id].map((comment) => <li key={comment._id}><strong>{getAuthorName(comment.author)}</strong>{comment.author?.username && <small className="muted"> @{comment.author.username}</small>}<span>{comment.content}</span></li>)}</ul>{user && <form className="comment-form" onSubmit={(event) => submitComment(event, post._id)}><input required maxLength="1000" placeholder="Write a comment…" value={commentText[post._id] || ''} onChange={(event) => setCommentText({ ...commentText, [post._id]: event.target.value })} /><button className="secondary-button">Send</button></form>}</div>}
+        </article>)}
       </section>
       {posts.length === 0 && !error && <div className="empty-state"><h2>No posts yet</h2><p className="muted">Be the first to start a conversation.</p></div>}
       <p className="muted back-link"><Link to="/">← Back to home</Link></p>
