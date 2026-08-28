@@ -6,6 +6,19 @@ import '../styles/membership.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+const TIER_META = {
+  supporter: { rank: 'I', label: 'COMMUNITY' },
+  insider: { rank: 'II', label: 'INSIDER' },
+  premier: { rank: 'III', label: 'PREMIER' },
+  elite: { rank: 'IV', label: 'ELITE' },
+  vip: { rank: 'V', label: 'VIP' },
+};
+
+const getTierMeta = (plan) => {
+  const key = String(plan?.cardDesign || plan?.slug || plan?.name || 'supporter').toLowerCase().replace(/\s+/g, '-');
+  return TIER_META[key] || TIER_META.supporter;
+};
+
 const money = (amount, currency = 'USD') =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(Number(amount || 0) / 100);
 
@@ -80,7 +93,7 @@ export default function MembershipPage() {
         {card && <article className="dashboard-panel card-panel" style={{ gridColumn: '1 / -1' }}><div><span className="eyebrow">DIGITAL CARD</span><h2>Carry your membership.</h2></div><MembershipCard card={card} onPrint={printMembershipCard} /></article>}
       </div></section>}
       <section className="dashboard-section page-container"><div className="section-heading"><div><span className="eyebrow">{active ? 'CHANGE OR RENEW' : 'MEMBERSHIP TIERS'}</span><h2>{active ? 'Choose your next tier.' : 'Choose your level of access.'}</h2></div><Link className="text-link" to="/membership/payments">Payment history →</Link></div>
-        <div className="dashboard-plans">{plans.map((plan) => <article className={`dashboard-plan ${plan.name === 'Insider' ? 'featured' : ''}`} key={plan._id}><span className="eyebrow">{plan.badge || plan.name}</span><h3>{plan.name}</h3><strong>{money(plan.price, plan.currency || 'USD')}</strong><small> / {(plan.durationUnit || 'YEAR').toLowerCase()}</small><p>{plan.description}</p><ul>{(plan.benefits || []).slice(0, 5).map((benefit) => <li key={benefit}>✓ {benefit}</li>)}</ul><button className="button button-primary" disabled={purchasing === plan._id || ((activePlan?._id === plan._id) && active)} onClick={() => startPurchase(plan._id)}>{purchasing === plan._id ? 'Creating payment request…' : activePlan?._id === plan._id ? 'Current membership' : active ? `Renew ${plan.name}` : 'Continue to payment'}</button></article>)}</div>
+        {plans.length === 0 ? <div className="membership-alert">No membership tiers are currently available.</div> : <div className="dashboard-plans">{plans.map((plan) => { const tier = getTierMeta(plan); return <article className={`dashboard-plan tier-${tier.rank.toLowerCase()} ${plan.name === 'Insider' ? 'featured' : ''}`} key={plan._id}><div className="membership-plan-heading"><span className="eyebrow">TIER {tier.rank}</span><span className="membership-plan-label">{tier.label}</span></div><h3>{plan.name}</h3><strong>{money(plan.price, plan.currency || 'USD')}</strong><small> / {(plan.durationUnit || 'YEAR').toLowerCase()}</small><p>{plan.description}</p><ul>{(plan.benefits || []).slice(0, 5).map((benefit) => <li key={benefit}>✓ {benefit}</li>)}</ul><button className="button button-primary" disabled={purchasing === plan._id || ((activePlan?._id === plan._id) && active)} onClick={() => startPurchase(plan._id)}>{purchasing === plan._id ? 'Creating payment request…' : activePlan?._id === plan._id ? 'Current membership' : active ? `Renew ${plan.name}` : 'Continue to payment'}</button></article>; })}</div>}
       </section>
       <div className="dashboard-links page-container"><Link to="/meetings">Explore private meetings →</Link><Link to="/community">Enter the community →</Link></div>
     </main>
