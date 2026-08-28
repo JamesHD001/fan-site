@@ -80,6 +80,14 @@
 - [x] Admin dashboard expansion
 - [ ] Community moderation/reporting
 
+## Repository hygiene
+- [x] Remove unused Vite/React starter assets
+- [x] Remove unused hero and legacy Keanu image assets
+- [x] Remove unused public icon sprite
+- [x] Remove duplicated nested project-rules document
+- [x] Preserve active application assets and configuration files
+- [ ] Re-run full frontend/backend tests after cleanup
+
 ## Quality & delivery
 - [ ] Payment unit/integration test suite
 - [ ] Full API integration test coverage
