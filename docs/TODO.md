@@ -71,6 +71,8 @@
 - [x] Make all five membership tiers available for purchase
 - [x] Expand visitor landing page hero and navigation flow
 - [x] Add visitor-facing About Keanu section
+- [x] Add licensed Keanu Reeves imagery to hero and About sections
+- [x] Add attribution for landing-page Keanu imagery
 - [x] Add visitor-facing career/movies journey timeline
 - [x] Expand visitor-facing five-tier membership preview
 - [x] Add independent fan-project disclosure on landing page
