@@ -1,29 +1,79 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import '../styles/settings.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+const MAX_UPLOAD_BYTES = 8 * 1024 * 1024
+const MAX_PROCESSED_BYTES = 140 * 1024
 const formatDate = (value) => value ? new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—'
 const statusLabel = (status = '') => status.replaceAll('_', ' ')
 
+const dataUrlBytes = (dataUrl) => {
+  const base64 = dataUrl.split(',')[1] || ''
+  return Math.floor((base64.length * 3) / 4) - (base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0)
+}
+
+const resizeProfilePhoto = (file) => new Promise((resolve, reject) => {
+  if (!file.type.startsWith('image/')) return reject(new Error('Please choose an image file.'))
+  if (file.size > MAX_UPLOAD_BYTES) return reject(new Error('The selected image is too large. Please choose an image under 8 MB.'))
+
+  const objectUrl = URL.createObjectURL(file)
+  const image = new Image()
+  image.onload = () => {
+    try {
+      const sourceSize = Math.min(image.naturalWidth, image.naturalHeight)
+      const sourceX = (image.naturalWidth - sourceSize) / 2
+      const sourceY = (image.naturalHeight - sourceSize) / 2
+      const canvas = document.createElement('canvas')
+      let size = 400
+      let output = ''
+
+      while (size >= 256) {
+        canvas.width = size
+        canvas.height = size
+        const context = canvas.getContext('2d')
+        context.clearRect(0, 0, size, size)
+        context.drawImage(image, sourceX, sourceY, sourceSize, sourceSize, 0, 0, size, size)
+
+        for (const quality of [0.84, 0.76, 0.68, 0.6, 0.52]) {
+          output = canvas.toDataURL('image/jpeg', quality)
+          if (dataUrlBytes(output) <= MAX_PROCESSED_BYTES) {
+            URL.revokeObjectURL(objectUrl)
+            return resolve(output)
+          }
+        }
+        size -= 48
+      }
+
+      URL.revokeObjectURL(objectUrl)
+      reject(new Error('The image could not be reduced enough. Please choose a simpler photo.'))
+    } catch {
+      URL.revokeObjectURL(objectUrl)
+      reject(new Error('Unable to process the selected image.'))
+    }
+  }
+  image.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Unable to read the selected image.')) }
+  image.src = objectUrl
+})
+
 export default function SettingsPage() {
-  const { token, user, logout } = useAuth()
+  const { token, user, updateUser, logout } = useAuth()
   const [profile, setProfile] = useState({ name: '', username: '', email: '' })
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'system')
   const [payments, setPayments] = useState([])
   const [saving, setSaving] = useState(false)
+  const [photoSaving, setPhotoSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const photoInputRef = useRef(null)
 
   useEffect(() => { if (user) setProfile({ name: user.name || '', username: user.username || '', email: user.email || '' }) }, [user])
   useEffect(() => { const resolved = theme === 'system' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme; localStorage.setItem('theme', theme); document.documentElement.dataset.theme = resolved }, [theme])
   useEffect(() => {
     if (!token) return
     fetch(`${API_BASE_URL}/memberships/payments`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.json())
-      .then((d) => setPayments(d.payments || []))
-      .catch(() => {})
+      .then((r) => r.json()).then((d) => setPayments(d.payments || [])).catch(() => {})
   }, [token])
 
   const handleSave = async (event) => {
@@ -31,14 +81,36 @@ export default function SettingsPage() {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/me`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(profile) })
       const data = await response.json(); if (!response.ok || !data.success) throw new Error(data.message || 'Unable to update your profile.')
+      updateUser(data.user)
       setMessage('Profile updated successfully.')
     } catch (err) { setError(err.message) } finally { setSaving(false) }
+  }
+
+  const handlePhotoChange = async (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    setPhotoSaving(true); setError(''); setMessage('')
+    try {
+      const profileImage = await resizeProfilePhoto(file)
+      const response = await fetch(`${API_BASE_URL}/auth/me/photo`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ profileImage }) })
+      const data = await response.json()
+      if (!response.ok || !data.success) throw new Error(data.message || 'Unable to update your profile photo.')
+      updateUser(data.user)
+      setMessage('Profile photo updated. Your membership card will now use this photo.')
+    } catch (err) { setError(err.message) } finally { setPhotoSaving(false) }
   }
 
   return <main className="settings-page"><section className="settings-shell"><header className="settings-heading"><div><span className="eyebrow">ACCOUNT SETTINGS</span><h1>Manage your account.</h1><p>Update your profile, choose your appearance, review purchases and manage your session.</p></div><Link className="settings-back" to="/dashboard">← Dashboard</Link></header>
     {message && <div className="settings-message" role="status">{message}</div>}{error && <div className="settings-error" role="alert">{error}</div>}
     <div className="settings-grid">
-      <section className="settings-card settings-profile"><div className="settings-card-heading"><span className="eyebrow">PROFILE</span></div><form onSubmit={handleSave}><label>Full name<input value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} required minLength="2" /></label><label>Username<input value={profile.username} onChange={(e) => setProfile({ ...profile, username: e.target.value })} required minLength="3" /></label><label>Email<input type="email" value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} required /></label><button className="settings-primary" disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</button></form></section>
+      <section className="settings-card settings-profile"><div className="settings-card-heading"><span className="eyebrow">PROFILE</span></div>
+        <div className="profile-photo-editor">
+          <div className="profile-photo-preview">{user?.profileImage ? <img src={user.profileImage} alt="Your profile" /> : <span>{(user?.name || 'CM').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</span>}</div>
+          <div><h2>Profile photo</h2><p>Use a clear face photo. It is automatically cropped to a square and resized before storage.</p><input ref={photoInputRef} className="visually-hidden-file-input" type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhotoChange} /><button type="button" className="settings-secondary" disabled={photoSaving} onClick={() => photoInputRef.current?.click()}>{photoSaving ? 'Processing…' : user?.profileImage ? 'Change photo' : 'Upload photo'}</button></div>
+        </div>
+        <form onSubmit={handleSave}><label>Full name<input value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} required minLength="2" /></label><label>Username<input value={profile.username} onChange={(e) => setProfile({ ...profile, username: e.target.value })} required minLength="3" /></label><label>Email<input type="email" value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} required /></label><button className="settings-primary" disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</button></form>
+      </section>
       <section className="settings-card"><div className="settings-card-heading"><span className="eyebrow">APPEARANCE</span></div><h2>Theme</h2><p>Choose how the community looks on your device.</p><div className="theme-options">{['system', 'light', 'dark'].map((option) => <button key={option} type="button" className={theme === option ? 'selected' : ''} onClick={() => setTheme(option)}>{option[0].toUpperCase() + option.slice(1)}{theme === option && <span>✓</span>}</button>)}</div></section>
       <section className="settings-card"><div className="settings-card-heading"><span className="eyebrow">PAYMENT SUPPORT</span></div><h2>Payment options</h2><p>Payments are completed manually through the designated support administrator. Available payment options and instructions are shown when you start a purchase.</p><Link className="settings-link" to="/membership">View membership options →</Link></section>
       <section className="settings-card settings-payments"><div className="settings-card-heading"><span className="eyebrow">PURCHASE HISTORY</span><span>{payments.length} record{payments.length === 1 ? '' : 's'}</span></div>{payments.length === 0 ? <p>No purchase history yet.</p> : <div className="settings-payments-list">{payments.slice(0, 8).map((payment) => <div key={payment._id}><div><b>{payment.membership?.plan?.name || payment.metadata?.description || payment.type || 'Purchase'}</b><small>{formatDate(payment.paidAt || payment.createdAt)}</small></div><strong>{payment.status === 'SUCCESS' ? 'Paid' : statusLabel(payment.status || '—')}</strong></div>)}</div>}<Link className="settings-link" to="/membership/payments">Open full payment history →</Link></section>
