@@ -47,6 +47,8 @@
 - [x] Fix admin user deletion and associated-data cleanup
 - [x] Allow deletion of other administrator/test accounts while protecting the current admin
 - [x] Return populated author data when creating posts
+- [x] Add admin deletion endpoints for membership, meeting and gift purchases
+- [x] Cascade purchase deletion to its associated payment record
 
 ## Frontend
 - [x] Manual payment status page
@@ -81,6 +83,8 @@
 - [x] Fix community post author identity display
 - [x] Display post username alongside author name
 - [x] Send authenticated requests when loading the community feed
+- [x] Add admin purchase-management tabs and delete controls
+- [x] Fix admin pending-post endpoint mismatch and JSON parsing error
 - [ ] Accessibility review
 
 ## Product features
