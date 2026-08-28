@@ -3,11 +3,10 @@ const {
   getDashboardStats, getUsers, updateUser, setUserActiveStatus, getPayments,
   getBookings, updateBookingStatus, getGiftTransactions, updateGiftStatus,
   getGiftsAdmin, updateGift, getMembershipPlansAdmin, updateMembershipPlan,
-  getMeetingTypesAdmin, updateMeetingType,   getPendingPosts,
-    moderatePost,
-    sendAnnouncement,
-    resolvePaymentReview,
-  } = require("../controllers/adminController");
+  getMeetingTypesAdmin, updateMeetingType, getPendingPosts, moderatePost,
+  sendAnnouncement,
+} = require("../controllers/adminController");
+const { confirmPayment, listPendingPayments, setPaymentSupport } = require("../controllers/manualPaymentController");
 const {
   listPlans, createPlan, updatePlan, deletePlan,
   listMeetings, createMeeting, updateMeeting, deleteMeeting,
@@ -18,13 +17,14 @@ const requireAdmin = require("../middleware/adminMiddleware");
 
 const router = express.Router();
 router.use(authenticate, requireAdmin);
-
 router.get("/dashboard", getDashboardStats);
 router.get("/users", getUsers);
 router.patch("/users/:id", updateUser);
 router.patch("/users/:id/status", setUserActiveStatus);
-router.patch("/payments/:id/review", resolvePaymentReview);
+router.patch("/users/:id/payment-support", setPaymentSupport);
 router.get("/payments", getPayments);
+router.get("/payments/pending", listPendingPayments);
+router.patch("/payments/:id/confirm", confirmPayment);
 router.get("/bookings", getBookings);
 router.patch("/bookings/:id/status", updateBookingStatus);
 router.get("/gifts", getGiftsAdmin);
@@ -50,5 +50,4 @@ router.delete("/catalog/gifts/:id", deleteGift);
 router.get("/posts/pending", getPendingPosts);
 router.patch("/posts/:id/moderate", moderatePost);
 router.post("/announcements", sendAnnouncement);
-
 module.exports = router;
