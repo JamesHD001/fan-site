@@ -1,48 +1,11 @@
 const express = require("express");
-
-const {
-  getMembershipPlans,
-  initializeMembershipPayment,
-  verifyMembershipPayment,
-  getMyMembership,
-  getPaymentHistory,
-  getMembershipCard,
-} = require("../controllers/membershipController");
-
+const { getMembershipPlans, getMyMembership, getPaymentHistory, getMembershipCard } = require("../controllers/membershipController");
+const { requestPayment } = require("../controllers/manualPaymentController");
 const authenticate = require("../middleware/authenticate");
-
 const router = express.Router();
-
 router.get("/plans", getMembershipPlans);
-
-router.post(
-  "/initialize",
-  authenticate,
-  initializeMembershipPayment
-);
-
-router.post(
-  "/verify",
-  authenticate,
-  verifyMembershipPayment
-);
-
-router.get(
-  "/payments",
-  authenticate,
-  getPaymentHistory
-);
-
-router.get(
-  "/card",
-  authenticate,
-  getMembershipCard
-);
-
-router.get(
-  "/me",
-  authenticate,
-  getMyMembership
-);
-
+router.post("/initialize", authenticate, (req, res) => { req.body.type = "MEMBERSHIP"; req.body.itemId = req.body.planId; return requestPayment(req, res); });
+router.get("/payments", authenticate, getPaymentHistory);
+router.get("/card", authenticate, getMembershipCard);
+router.get("/me", authenticate, getMyMembership);
 module.exports = router;
