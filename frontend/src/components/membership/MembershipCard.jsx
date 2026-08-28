@@ -40,7 +40,7 @@ export default function MembershipCard({ card, onPrint }) {
             <span className="digital-card-brand-mark">KR</span>
             <span>KEANU REEVES<br /><b>FAN COMMUNITY</b></span>
           </div>
-          <span className="digital-card-edition">MEMBER / 2026</span>
+          <span className="digital-card-edition">MEMBER | 2026</span>
         </div>
 
         <div className="digital-card-chip" aria-hidden="true">
