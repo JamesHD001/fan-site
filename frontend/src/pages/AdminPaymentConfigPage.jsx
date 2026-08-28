@@ -25,7 +25,7 @@ export default function AdminPaymentConfigPage() {
 
     let ignore = false
 
-    fetch(`${API_BASE_URL}/payment/options`)
+    fetch(`${API_BASE_URL}/payment-config/options`)
       .then(async response => {
         const data = await response.json()
         if (!response.ok || !data.success) {
@@ -56,7 +56,7 @@ export default function AdminPaymentConfigPage() {
     setError('')
     setMessage('')
     try {
-      const response = await fetch(`${API_BASE_URL}/payment/config`, {
+      const response = await fetch(`${API_BASE_URL}/payment-config/config`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ cryptoOptions: nextCrypto, giftCardOptions: nextGift })
