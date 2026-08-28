@@ -38,6 +38,8 @@
 - [x] Simplify environment validation after provider removal
 - [x] Remove provider webhook/reconciliation startup dependencies
 - [x] Add payment configuration model/API
+- [x] Add authenticated member profile photo update endpoint
+- [x] Validate and size-limit stored profile photos
 - [ ] Centralize API error handling
 - [ ] Add authentication/payment rate limiting
 - [ ] Add stale pending-payment cleanup
@@ -57,6 +59,9 @@
 - [ ] Centralize API client
 - [ ] Complete responsive UI
 - [x] Harden membership card responsive layout and prevent detail overlap
+- [x] Add member profile photo upload, client-side crop and resize
+- [x] Show uploaded member photo on membership card while retaining initials fallback
+- [x] Fix membership card print isolation and full-color print styling
 - [ ] Accessibility review
 
 ## Product features
