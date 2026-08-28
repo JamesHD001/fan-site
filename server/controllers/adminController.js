@@ -4,6 +4,11 @@ const Booking = require("../models/Booking");
 const GiftTransaction = require("../models/GiftTransaction");
 const Post = require("../models/Post");
 const Payment = require("../models/Payment");
+const Comment = require("../models/Comment");
+const Like = require("../models/Like");
+const Notification = require("../models/Notification");
+const OtpVerification = require("../models/OtpVerification");
+const mongoose = require("mongoose");
 
 const getDashboardStats = async (req, res) => {
   try {
@@ -98,47 +103,44 @@ const setUserActiveStatus = async (req, res) => {
   }
 };
 
-const Comment = require("../models/Comment");
-const Like = require("../models/Like");
-const Notification = require("../models/Notification");
-const OtpVerification = require("../models/OtpVerification");
-const mongoose = require("mongoose");
-
 const deleteUser = async (req, res) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ success: false, message: "Invalid user id." });
+    }
+
     if (req.params.id === String(req.user._id)) {
       return res.status(400).json({ success: false, message: "You cannot delete your own administrator account." });
     }
+
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ success: false, message: "User not found." });
     if (user.role === "ADMIN") {
       return res.status(400).json({ success: false, message: "Administrator accounts cannot be deleted. Disable the account instead." });
     }
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
-    try {
-      await Promise.all([
-        Membership.deleteMany({ user: user._id }).session(session),
-        Booking.deleteMany({ user: user._id }).session(session),
-        GiftTransaction.deleteMany({ user: user._id }).session(session),
-        Payment.deleteMany({ user: user._id }).session(session),
-        Post.deleteMany({ user: user._id }).session(session),
-        Comment.deleteMany({ user: user._id }).session(session),
-        Like.deleteMany({ user: user._id }).session(session),
-        Notification.deleteMany({ user: user._id }).session(session),
-        OtpVerification.deleteMany({ user: user._id }).session(session),
-      ]);
-      await user.deleteOne({ session });
-      await session.commitTransaction();
-    } catch (error) {
-      if (session.inTransaction()) await session.abortTransaction();
-      throw error;
-    } finally {
-      await session.endSession();
+    // Delete all user-owned records first. Posts and comments use `author`, not `user`.
+    // These operations intentionally do not require a MongoDB transaction so deletion
+    // also works with local MongoDB instances that are not configured as replica sets.
+    await Membership.deleteMany({ user: user._id });
+    await Booking.deleteMany({ user: user._id });
+    await GiftTransaction.deleteMany({ user: user._id });
+    await Payment.deleteMany({ user: user._id });
+    await Post.deleteMany({ author: user._id });
+    await Comment.deleteMany({ author: user._id });
+    await Like.deleteMany({ user: user._id });
+    await Notification.deleteMany({ user: user._id });
+    await OtpVerification.deleteMany({ user: user._id });
+
+    const deletedUser = await User.findByIdAndDelete(user._id);
+    if (!deletedUser) {
+      return res.status(404).json({ success: false, message: "User was not found during deletion." });
     }
 
-    return res.json({ success: true, message: `User ${user.email} and all associated data were deleted permanently.` });
+    return res.json({
+      success: true,
+      message: `User ${user.email} and all associated data were deleted permanently.`
+    });
   } catch (e) {
     console.error("Admin delete user error:", e);
     return res.status(500).json({ success: false, message: "Unable to delete user." });
