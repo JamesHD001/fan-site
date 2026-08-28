@@ -1,0 +1,5 @@
+const PaymentConfig=require("../models/PaymentConfig");
+const getConfig=async()=>PaymentConfig.findOne({key:"default"}).lean();
+const getPublicPaymentOptions=async(req,res)=>{try{const config=await getConfig();return res.json({success:true,cryptoOptions:(config?.cryptoOptions||[]).filter(x=>x.isActive),giftCardOptions:(config?.giftCardOptions||[]).filter(x=>x.isActive).map(({_id,brand,instructions})=>({_id,brand,instructions}))})}catch(error){return res.status(500).json({success:false,message:"Unable to retrieve payment options."})}};
+const upsertConfig=async(req,res)=>{try{const {cryptoOptions=[],giftCardOptions=[]}=req.body;const config=await PaymentConfig.findOneAndUpdate({key:"default"},{key:"default",cryptoOptions,giftCardOptions,updatedBy:req.user._id},{new:true,upsert:true,runValidators:true});return res.json({success:true,message:"Payment configuration updated.",config})}catch(error){return res.status(400).json({success:false,message:error.message||"Unable to update payment configuration."})}};
+module.exports={getPublicPaymentOptions,upsertConfig};
