@@ -1,66 +1,45 @@
 # Fan Site — Project TODO
 
 ## Critical stabilization
-- [x] Associate meeting payments with bookings
-- [x] Fix meeting Paystack amount verification to use minor units directly
-- [x] Fix membership, meeting and gift frontend price formatting
-- [x] Centralize successful payment settlement
-- [x] Add generic authenticated payment verification endpoint
-- [x] Make payment callback server-authoritative
-- [x] Add database-level active meeting-slot uniqueness
-- [x] Remove insecure default admin seed credentials
-- [x] Declare Mongoose as a server dependency
-- [x] Add request body-size limits
-- [x] Add provider-independent Payment model foundation
-- [x] Add platform Wallet model
-- [x] Add wallet transaction ledger model
-- [x] Add wallet credit/debit service with idempotent references
-- [x] Add authenticated wallet and transaction endpoints
-- [x] Add provider registry/contract for payment-provider migration
+- [x] Replace automated gateway checkout with designated-support manual payment flow
+- [x] Generate unique payment tokens for membership, meeting and gift requests
+- [x] Require designated support administrator confirmation before settlement
+- [x] Notify members in-site after successful admin payment confirmation
+- [x] Remove wallet models, services, routes and UI
+- [x] Remove saved payment-method UI and provider callbacks
+- [x] Keep membership purchases, meeting booking and gift gifting intact
 - [ ] Run index migration locally
-- [ ] Run backend/frontend tests after refactor
-- [ ] Complete payment integration tests
+- [ ] Run backend/frontend tests after payment refactor
+- [ ] Add manual payment integration tests
 
 ## Payment architecture
-- [x] Implement Flutterwave provider
-- [x] Implement Flutterwave initialization and verification
-- [x] Implement Flutterwave webhook handling
-- [x] Implement wallet funding/deposit flow
-- [x] Add deposit UI
-- [x] Add secure Flutterwave payment-method token model
-- [x] Add saved-card listing/default/removal API
-- [x] Add saved-card management UI
-- [x] Add tokenized saved-card wallet funding endpoint
-- [x] Keep provider NGN conversion internal to the payment engine
-- [ ] Migrate membership purchases to platform credits
-- [ ] Migrate meeting purchases to platform credits
-- [ ] Migrate gifts to platform credits
-- [ ] Apply platform-credit protection to all purchasable items
-- [ ] Implement refunds/reversals
-- [x] Add payment reconciliation tools
-- [ ] Investigate Bybit Pay merchant/API integration
-- [ ] Implement crypto funding (BTC/USDT/USDC/BNB)
-- [ ] Retire Paystack after successful Flutterwave migration
+- [x] Manual payment request record with immutable purchase snapshot
+- [x] Designated payment-support administrator
+- [x] Payment token lookup for the requesting member
+- [x] Admin payment operations page
+- [x] Domain settlement after manual confirmation
+- [x] Membership activation and membership-card availability after confirmation
+- [x] Meeting confirmation after payment confirmation
+- [x] Gift completion after payment confirmation
+- [ ] Add payment request expiration/cleanup
+- [ ] Add audit logging for administrative payment confirmations
+- [ ] Future: replace manual flow with a production payment gateway
 
 ## Backend
+- [x] Simplify environment validation after provider removal
+- [x] Remove provider webhook/reconciliation startup dependencies
+- [x] Keep notification service for payment confirmation notices
 - [ ] Centralize API error handling
 - [ ] Add authentication/payment rate limiting
-- [ ] Add environment configuration validation
 - [ ] Add stale pending-payment cleanup
-- [x] Improve exchange-rate timeout/caching and lock the Flutterwave reference-rate snapshot per payment
-- [x] Record provider fee/tax/settlement details without reducing customer payment validation
-- [x] Acknowledge Flutterwave `REQUIRES_REVIEW` webhook outcomes with HTTP 200
-- [x] Guard against provider transaction IDs being claimed by another payment
 - [ ] Add audit logging for administrative actions
 
 ## Frontend
-- [x] Authentication context
-- [x] Protected routes
-- [x] Generic payment callback
-- [x] Wallet balance UI
-- [x] Add-funds UI
-- [x] Saved payment methods UI
-- [ ] Wallet transaction history UI
+- [x] Manual payment request status page
+- [x] Remove wallet balance UI
+- [x] Remove add-funds UI
+- [x] Remove saved payment methods UI
+- [x] Remove payment gateway callback page
 - [ ] Centralize API client
 - [ ] Refactor App.jsx into route/layout modules
 - [ ] Add reusable currency/date formatters
@@ -69,12 +48,12 @@
 
 ## Product features
 - [ ] Complete homepage
-- [ ] Membership dashboard and digital card UI
-- [ ] Meeting availability/calendar UI
-- [ ] Gift history and improved gifting UX
+- [x] Membership dashboard and digital card UI
+- [x] Meeting availability/calendar UI
+- [x] Gift history and improved gifting UX
 - [ ] Community moderation/reporting
-- [ ] Notification center polish
-- [ ] Admin dashboard expansion
+- [x] Notification center
+- [x] Admin dashboard expansion
 
 ## Quality & delivery
 - [ ] Payment unit/integration test suite
