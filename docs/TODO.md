@@ -50,7 +50,7 @@
 - [x] Crypto/gift-card method selector
 - [x] Crypto wallet display
 - [x] Gift-card option display
-- [x] Proof submission UI
+- [x] Payment-proof submission UI
 - [x] Persist payment proof files outside MongoDB documents
 - [x] Remove wallet balance/add-funds UI
 - [x] Remove saved payment methods UI
@@ -65,7 +65,8 @@
 - [x] Fix membership card print isolation and full-color print styling
 - [x] Add five-tier membership card visual hierarchy
 - [x] Give each membership tier a distinct card design treatment
-- [x] Add VIP celebrity-edition monogram treatment
+- [x] Use supplied Keanu Reeves signature asset on VIP cards only
+- [x] Align membership-page card presentation with print-preview geometry
 - [ ] Accessibility review
 
 ## Product features
