@@ -44,6 +44,7 @@
 - [ ] Add authentication/payment rate limiting
 - [ ] Add stale pending-payment cleanup
 - [ ] Add administrative audit log
+- [x] Fix admin user deletion and associated-data cleanup
 
 ## Frontend
 - [x] Manual payment status page
