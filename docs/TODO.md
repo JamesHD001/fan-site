@@ -69,6 +69,11 @@
 - [x] Use supplied Keanu Reeves signature asset on VIP cards only
 - [x] Align membership-page card presentation with print-preview geometry
 - [x] Make all five membership tiers available for purchase
+- [x] Expand visitor landing page hero and navigation flow
+- [x] Add visitor-facing About Keanu section
+- [x] Add visitor-facing career/movies journey timeline
+- [x] Expand visitor-facing five-tier membership preview
+- [x] Add independent fan-project disclosure on landing page
 - [ ] Accessibility review
 
 ## Product features
