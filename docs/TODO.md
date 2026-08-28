@@ -60,6 +60,7 @@
 - [ ] Centralize API client
 - [x] Complete responsive membership card layout
 - [x] Harden membership card responsive layout and prevent detail overlap
+- [x] Fix membership card content spacing/overlap at all responsive widths
 - [x] Add member profile photo upload, client-side crop and resize
 - [x] Show uploaded member photo on membership card while retaining initials fallback
 - [x] Fix membership card print isolation and full-color print styling
