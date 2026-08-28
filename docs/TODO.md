@@ -45,6 +45,7 @@
 - [ ] Add stale pending-payment cleanup
 - [ ] Add administrative audit log
 - [x] Fix admin user deletion and associated-data cleanup
+- [x] Return populated author data when creating posts
 
 ## Frontend
 - [x] Manual payment status page
@@ -76,6 +77,9 @@
 - [x] Add visitor-facing career/movies journey timeline
 - [x] Expand visitor-facing five-tier membership preview
 - [x] Add independent fan-project disclosure on landing page
+- [x] Fix community post author identity display
+- [x] Display post username alongside author name
+- [x] Send authenticated requests when loading the community feed
 - [ ] Accessibility review
 
 ## Product features
