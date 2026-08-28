@@ -20,24 +20,35 @@ export default function AdminPaymentConfigPage() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
 
-  const load = async () => {
-    setLoading(true)
-    setError('')
-    try {
-      const response = await fetch(`${API_BASE_URL}/payment/options`)
-      const data = await response.json()
-      if (!response.ok || !data.success) throw new Error(data.message || 'Unable to load payment configuration.')
-      setCryptoOptions(data.cryptoOptions || [])
-      setGiftCardOptions(data.giftCardOptions || [])
-    } catch (e) {
-      setError(e.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
-    if (token && user?.role === 'ADMIN') load()
+    if (!token || user?.role !== 'ADMIN') return
+
+    let ignore = false
+
+    fetch(`${API_BASE_URL}/payment/options`)
+      .then(async response => {
+        const data = await response.json()
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || 'Unable to load payment configuration.')
+        }
+        return data
+      })
+      .then(data => {
+        if (ignore) return
+        setCryptoOptions(data.cryptoOptions || [])
+        setGiftCardOptions(data.giftCardOptions || [])
+        setError('')
+      })
+      .catch(e => {
+        if (!ignore) setError(e.message)
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false)
+      })
+
+    return () => {
+      ignore = true
+    }
   }, [token, user?.role])
 
   const persist = async (nextCrypto, nextGift) => {
