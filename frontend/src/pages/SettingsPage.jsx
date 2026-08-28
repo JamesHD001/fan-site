@@ -22,8 +22,7 @@ export default function SettingsPage() {
     event.preventDefault(); setSaving(true); setError(''); setMessage('')
     try {
       const response = await fetch(`${API_BASE_URL}/auth/me`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(profile) })
-      const data = await response.json()
-      if (!response.ok || !data.success) throw new Error(data.message || 'Unable to update your profile.')
+      const data = await response.json(); if (!response.ok || !data.success) throw new Error(data.message || 'Unable to update your profile.')
       setMessage('Profile updated successfully.')
     } catch (err) { setError(err.message) } finally { setSaving(false) }
   }
@@ -33,6 +32,7 @@ export default function SettingsPage() {
     <div className="settings-grid">
       <section className="settings-card settings-profile"><div className="settings-card-heading"><span className="eyebrow">PROFILE</span></div><form onSubmit={handleSave}><label>Full name<input value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} required minLength="2" /></label><label>Username<input value={profile.username} onChange={(e) => setProfile({ ...profile, username: e.target.value })} required minLength="3" /></label><label>Email<input type="email" value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} required /></label><button className="settings-primary" disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</button></form></section>
       <section className="settings-card"><div className="settings-card-heading"><span className="eyebrow">APPEARANCE</span></div><h2>Theme</h2><p>Choose how the community looks on your device.</p><div className="theme-options">{['system', 'light', 'dark'].map((option) => <button key={option} type="button" className={theme === option ? 'selected' : ''} onClick={() => setTheme(option)}>{option[0].toUpperCase() + option.slice(1)}{theme === option && <span>✓</span>}</button>)}</div></section>
+      <section className="settings-card"><div className="settings-card-heading"><span className="eyebrow">PAYMENT METHODS</span></div><h2>Cards & payment methods</h2><p>Manage securely tokenized cards used for fast wallet funding.</p><Link className="settings-link" to="/payment-methods">Manage payment methods →</Link></section>
       <section className="settings-card settings-payments"><div className="settings-card-heading"><span className="eyebrow">PAYMENT HISTORY</span><span>{payments.length} record{payments.length === 1 ? '' : 's'}</span></div>{payments.length === 0 ? <p>No payment history yet.</p> : <div className="settings-payments-list">{payments.slice(0, 8).map((payment) => <div key={payment._id}><div><b>{payment.membership?.plan?.name || payment.type || 'Payment'}</b><small>{new Date(payment.paidAt || payment.createdAt).toLocaleDateString()}</small></div><strong>{payment.status || '—'}</strong></div>)}</div>}<Link className="settings-link" to="/membership/payments">Open full payment history →</Link></section>
       <section className="settings-card settings-security"><div className="settings-card-heading"><span className="eyebrow">SECURITY</span></div><h2>Account security</h2><p>Password changes and verification controls will live here as the account security system expands.</p><button className="settings-danger" type="button" onClick={logout}>Sign out</button></section>
     </div>
