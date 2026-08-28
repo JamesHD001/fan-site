@@ -37,9 +37,9 @@
 ## Backend
 - [x] Simplify environment validation after provider removal
 - [x] Remove provider webhook/reconciliation startup dependencies
-- [x] Add payment configuration model/API
 - [x] Add authenticated member profile photo update endpoint
 - [x] Validate and size-limit stored profile photos
+- [ ] Add payment configuration model/API
 - [ ] Centralize API error handling
 - [ ] Add authentication/payment rate limiting
 - [ ] Add stale pending-payment cleanup
@@ -60,13 +60,12 @@
 - [ ] Centralize API client
 - [x] Complete responsive membership card layout
 - [x] Harden membership card responsive layout and prevent detail overlap
-- [x] Fix membership card content spacing/overlap at all responsive widths
-- [x] Add member profile photo upload, client-side crop and resize
-- [x] Show uploaded member photo on membership card while retaining initials fallback
-- [x] Fix membership card print isolation and full-color print styling
-- [x] Add five-tier membership card visual hierarchy
-- [x] Give each membership tier a distinct card design treatment
-- [x] Use supplied Keanu Reeves signature asset on VIP cards only
+- [x] Restore original membership card information layout
+- [x] Apply distinct visual styling to all five membership tiers
+- [x] Restrict celebrity signature to Elite and VIP cards
+- [x] Use supplied Keanu Reeves signature asset on Elite and VIP cards
+- [x] Keep member profile photo on card with initials fallback
+- [x] Keep membership card print isolation and full-color print styling
 - [x] Align membership-page card presentation with print-preview geometry
 - [x] Make all five membership tiers available for purchase
 - [x] Expand visitor landing page hero and navigation flow
