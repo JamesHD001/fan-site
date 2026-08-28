@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import '../styles/home.css'
 
 const highlights = [
   { number: '01', title: 'Connect', text: 'Join a respectful fan community built around conversation, shared moments and genuine appreciation.' },
