@@ -17,8 +17,8 @@
 - [x] Preserve purchase-specific settlement
 - [x] Implement real proof-file upload/storage using MongoDB GridFS
 - [x] Add payment-proof file validation and 5 MB size limit
-- [ ] Add admin payment configuration UI
-- [ ] Seed initial crypto wallet/gift-card configuration
+- [x] Add admin payment configuration UI
+- [x] Seed initial crypto wallet/gift-card configuration
 - [ ] Run index migration locally
 - [ ] Run backend/frontend tests after payment refactor
 - [ ] Add manual payment integration tests
@@ -47,8 +47,6 @@
 - [x] Fix admin user deletion and associated-data cleanup
 - [x] Allow deletion of other administrator/test accounts while protecting the current admin
 - [x] Return populated author data when creating posts
-- [x] Add admin deletion endpoints for membership, meeting and gift purchases
-- [x] Cascade purchase deletion to its associated payment record
 
 ## Frontend
 - [x] Manual payment status page
@@ -61,7 +59,8 @@
 - [x] Remove saved payment methods UI
 - [x] Remove payment gateway callback UI
 - [x] Replace proof URL/data-URL persistence with protected stored-file retrieval
-- [ ] Add payment configuration management UI
+- [x] Add payment configuration management UI
+- [x] Style and structure payment configuration administration page
 - [ ] Centralize API client
 - [x] Complete responsive membership card layout
 - [x] Harden membership card responsive layout and prevent detail overlap
@@ -83,8 +82,6 @@
 - [x] Fix community post author identity display
 - [x] Display post username alongside author name
 - [x] Send authenticated requests when loading the community feed
-- [x] Add admin purchase-management tabs and delete controls
-- [x] Fix admin pending-post endpoint mismatch and JSON parsing error
 - [ ] Accessibility review
 
 ## Product features
