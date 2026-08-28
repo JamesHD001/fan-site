@@ -27,6 +27,11 @@
 - [x] Implement Flutterwave webhook handling
 - [x] Implement wallet funding/deposit flow
 - [x] Add deposit UI
+- [x] Add secure Flutterwave payment-method token model
+- [x] Add saved-card listing/default/removal API
+- [x] Add saved-card management UI
+- [x] Add tokenized saved-card wallet funding endpoint
+- [x] Keep provider NGN conversion internal to the payment engine
 - [ ] Migrate membership purchases to platform credits
 - [ ] Migrate meeting purchases to platform credits
 - [ ] Migrate gifts to platform credits
@@ -52,8 +57,9 @@
 - [x] Authentication context
 - [x] Protected routes
 - [x] Generic payment callback
-- [ ] Wallet balance UI
+- [x] Wallet balance UI
 - [x] Add-funds UI
+- [x] Saved payment methods UI
 - [ ] Wallet transaction history UI
 - [ ] Centralize API client
 - [ ] Refactor App.jsx into route/layout modules
