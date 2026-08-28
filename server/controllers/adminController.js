@@ -98,6 +98,53 @@ const setUserActiveStatus = async (req, res) => {
   }
 };
 
+const Comment = require("../models/Comment");
+const Like = require("../models/Like");
+const Notification = require("../models/Notification");
+const OtpVerification = require("../models/OtpVerification");
+const mongoose = require("mongoose");
+
+const deleteUser = async (req, res) => {
+  try {
+    if (req.params.id === String(req.user._id)) {
+      return res.status(400).json({ success: false, message: "You cannot delete your own administrator account." });
+    }
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ success: false, message: "User not found." });
+    if (user.role === "ADMIN") {
+      return res.status(400).json({ success: false, message: "Administrator accounts cannot be deleted. Disable the account instead." });
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      await Promise.all([
+        Membership.deleteMany({ user: user._id }).session(session),
+        Booking.deleteMany({ user: user._id }).session(session),
+        GiftTransaction.deleteMany({ user: user._id }).session(session),
+        Payment.deleteMany({ user: user._id }).session(session),
+        Post.deleteMany({ user: user._id }).session(session),
+        Comment.deleteMany({ user: user._id }).session(session),
+        Like.deleteMany({ user: user._id }).session(session),
+        Notification.deleteMany({ user: user._id }).session(session),
+        OtpVerification.deleteMany({ user: user._id }).session(session),
+      ]);
+      await user.deleteOne({ session });
+      await session.commitTransaction();
+    } catch (error) {
+      if (session.inTransaction()) await session.abortTransaction();
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+
+    return res.json({ success: true, message: `User ${user.email} and all associated data were deleted permanently.` });
+  } catch (e) {
+    console.error("Admin delete user error:", e);
+    return res.status(500).json({ success: false, message: "Unable to delete user." });
+  }
+};
+
 const getPayments = async (req, res) => {
   try {
     const query = {};
@@ -225,4 +272,4 @@ const moderatePost = async (req, res) => {
 
 const sendAnnouncement = async (req, res) => res.status(501).json({ success: false, message: "Announcement delivery is not configured yet." });
 
-module.exports = { getDashboardStats, getUsers, updateUser, setUserActiveStatus, getPayments, getBookings, updateBookingStatus, getGiftTransactions, updateGiftStatus, getGiftsAdmin, updateGift, getMembershipPlansAdmin, updateMembershipPlan, getMeetingTypesAdmin, updateMeetingType, getPendingPosts, moderatePost, sendAnnouncement };
+module.exports = { getDashboardStats, getUsers, updateUser, setUserActiveStatus, deleteUser, getPayments, getBookings, updateBookingStatus, getGiftTransactions, updateGiftStatus, getGiftsAdmin, updateGift, getMembershipPlansAdmin, updateMembershipPlan, getMeetingTypesAdmin, updateMeetingType, getPendingPosts, moderatePost, sendAnnouncement };

@@ -101,22 +101,25 @@ const handlePaystackWebhook = async (req, res) => {
     }
 
     if (Number(transaction.amount) !== Number(payment.amount)) {
-      payment.status = "FAILED";
+      payment.status = "REQUIRES_REVIEW";
       payment.providerResponse = transaction;
+      payment.metadata = { ...(payment.metadata || {}), reviewReason: "AMOUNT_MISMATCH", expectedAmount: payment.amount, receivedAmount: transaction.amount };
       await payment.save({ session });
       await session.commitTransaction();
-      return res.status(400).send("Amount mismatch.");
+      // Respond 200 so Paystack does not retry endlessly; flagged for admin review.
+      return res.status(200).send("Amount mismatch. Flagged for review.");
     }
 
     if (
       !transaction.currency ||
       transaction.currency.toUpperCase() !== payment.currency.toUpperCase()
     ) {
-      payment.status = "FAILED";
+      payment.status = "REQUIRES_REVIEW";
       payment.providerResponse = transaction;
+      payment.metadata = { ...(payment.metadata || {}), reviewReason: "CURRENCY_MISMATCH", expectedCurrency: payment.currency, receivedCurrency: transaction.currency };
       await payment.save({ session });
       await session.commitTransaction();
-      return res.status(400).send("Currency mismatch.");
+      return res.status(200).send("Currency mismatch. Flagged for review.");
     }
 
     if (transaction.status !== "success") {

@@ -16,13 +16,14 @@ const createOtp = async ({ email, user = null, purpose }) => {
 };
 
 const verifyOtp = async ({ email, purpose, otp }) => {
+  if (!/^\d{6}$/.test(String(otp || ""))) return { valid: false, message: "Invalid OTP." };
   const record = await OtpVerification.findOne({ email: String(email).trim().toLowerCase(), purpose });
   if (!record) return { valid: false, message: "Invalid or expired OTP." };
   if (record.expiresAt.getTime() <= Date.now()) { await record.deleteOne(); return { valid: false, message: "This OTP has expired." }; }
   if (record.attempts >= MAX_ATTEMPTS) return { valid: false, message: "Too many incorrect attempts. Request a new OTP." };
   const suppliedHash = Buffer.from(hashOtp(otp));
   const storedHash = Buffer.from(record.otpHash);
-  if (!/^\d{6}$/.test(String(otp)) || suppliedHash.length !== storedHash.length || !crypto.timingSafeEqual(storedHash, suppliedHash)) { record.attempts += 1; await record.save(); return { valid: false, message: "Invalid OTP." }; }
+  if (suppliedHash.length !== storedHash.length || !crypto.timingSafeEqual(storedHash, suppliedHash)) { record.attempts += 1; await record.save(); return { valid: false, message: "Invalid OTP." }; }
   await record.deleteOne();
   return { valid: true };
 };

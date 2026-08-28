@@ -28,6 +28,7 @@ const verifyRegistration = async (req, res) => {
     const { name, username, email, password, otp } = req.body;
     const normalizedEmail = String(email || "").trim().toLowerCase();
     const normalizedUsername = String(username || "").trim().toLowerCase();
+    if (!name || String(name).trim().length < 2 || String(name).trim().length > 100 || !/^[a-z0-9_]{3,30}$/.test(normalizedUsername) || !/^\S+@\S+\.\S+$/.test(normalizedEmail) || String(password || "").length < 8) return res.status(400).json({ success: false, message: "Please provide valid registration details." });
     const result = await verifyOtp({ email: normalizedEmail, purpose: "REGISTRATION", otp });
     if (!result.valid) return res.status(400).json({ success: false, message: result.message });
     const existingUser = await User.findOne({ $or: [{ email: normalizedEmail }, { username: normalizedUsername }] });

@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const mongoose = require("mongoose");
 const Payment = require("../models/Payment");
-const { verifyDeposit } = require("../services/flutterwaveProvider");
+const { verifyPayment: verifyDeposit } = require("../services/providers/flutterwaveProvider");
 const { settleSuccessfulPayment, applyProviderTransactionDetails } = require("../services/paymentSettlementService");
 
 const safeEqual = (left, right) => {
