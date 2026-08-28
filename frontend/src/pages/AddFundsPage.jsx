@@ -61,6 +61,13 @@ export default function AddFundsPage() {
         body: JSON.stringify({ transactionId: result.transaction_id }),
       })
       const data = await response.json()
+      if (response.status === 409 && data.requiresReview) {
+        // Server flagged a real customer payment for manual reconciliation.
+        // Funds will be handled by support — never show this as a generic failure.
+        setPayment(null)
+        setStatus({ type: 'review', message: data.message || 'Your payment needs a quick review. Support will credit your balance shortly.' })
+        return
+      }
       if (!response.ok || !data.success) throw new Error(data.message || 'Transaction verification failed.')
       await loadWallet()
       setPayment(null)
@@ -93,7 +100,7 @@ export default function AddFundsPage() {
           <strong>{wallet ? `$${(wallet.availableBalance / 100).toFixed(2)}` : '$0.00'}</strong>
         </div>
 
-        {status.message && <div className={`add-funds-message ${status.type}`} role="status">{status.message}</div>}
+        {status.message && <div className={`add-funds-message ${status.type === 'review' ? 'success' : status.type}`} role="status">{status.type === 'review' && '⏳ '}{status.message}</div>}
 
         <form onSubmit={startPayment} className="add-funds-form">
           <label htmlFor="fund-amount">Amount (USD)</label>

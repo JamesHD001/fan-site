@@ -5,6 +5,7 @@ validateEnv();
 const app = require("./app");
 const connectDatabase = require("./config/database");
 const { startMembershipMaintenance } = require("./jobs/membershipMaintenance");
+const { startPaymentReconciliation } = require("./jobs/paymentReconciliation");
 
 const PORT = process.env.PORT || 5000;
 
@@ -12,6 +13,7 @@ const startServer = async () => {
   try {
     await connectDatabase();
     startMembershipMaintenance();
+    startPaymentReconciliation();
 
     app.listen(PORT, () => {
       console.log(`Server running on http://localhost:${PORT}`);
