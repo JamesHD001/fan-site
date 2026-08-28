@@ -15,8 +15,8 @@
 - [x] Add admin proof review and rejection flow
 - [x] Prevent confirmation until proof is submitted
 - [x] Preserve purchase-specific settlement
-- [ ] Implement real proof-file upload/storage (current endpoint accepts a proof URL)
-- [ ] Add proof-file validation and size limits
+- [x] Implement real proof-file upload/storage using MongoDB GridFS
+- [x] Add payment-proof file validation and 5 MB size limit
 - [ ] Add admin payment configuration UI
 - [ ] Seed initial crypto wallet/gift-card configuration
 - [ ] Run index migration locally
@@ -51,10 +51,11 @@
 - [x] Crypto wallet display
 - [x] Gift-card option display
 - [x] Proof submission UI
+- [x] Persist payment proof files outside MongoDB documents
 - [x] Remove wallet balance/add-funds UI
 - [x] Remove saved payment methods UI
 - [x] Remove payment gateway callback UI
-- [ ] Replace proof URL field with integrated file uploader
+- [x] Replace proof URL/data-URL persistence with protected stored-file retrieval
 - [ ] Add payment configuration management UI
 - [ ] Centralize API client
 - [ ] Complete responsive UI
@@ -62,10 +63,14 @@
 - [x] Add member profile photo upload, client-side crop and resize
 - [x] Show uploaded member photo on membership card while retaining initials fallback
 - [x] Fix membership card print isolation and full-color print styling
+- [x] Add five-tier membership card visual hierarchy
+- [x] Give each membership tier a distinct card design treatment
+- [x] Add VIP celebrity-edition monogram treatment
 - [ ] Accessibility review
 
 ## Product features
 - [x] Membership dashboard and digital card UI
+- [x] Five membership tiers: Supporter, Insider, Premier, Elite, VIP
 - [x] Meeting availability/calendar UI
 - [x] Gift history and gifting UX
 - [x] Notification center

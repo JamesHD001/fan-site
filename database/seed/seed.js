@@ -11,4 +11,70 @@ const celebrityData = require("./data/celebrity");
 const membershipData = require("./data/memberships");
 const meetingData = require("./data/meetings");
 const giftData = require("./data/gifts");
-const seedDatabase = async()=>{try{console.log("Connecting to database...");await connectDatabase();console.log("MongoDB ping successful.");await Celebrity.deleteMany({});await MembershipPlan.deleteMany({});await MeetingType.deleteMany({});await Gift.deleteMany({});const celebrity=await Celebrity.create(celebrityData);await MembershipPlan.insertMany(membershipData);await MeetingType.insertMany(meetingData);await Gift.insertMany(giftData);console.log(`Created celebrity: ${celebrity.name}`);console.log(`Created ${membershipData.length} membership plans.`);console.log(`Created ${meetingData.length} meeting types.`);console.log(`Created ${giftData.length} gifts.`);if(!process.env.ADMIN_EMAIL||!process.env.ADMIN_USERNAME||!process.env.ADMIN_PASSWORD)throw new Error("ADMIN_EMAIL, ADMIN_USERNAME and ADMIN_PASSWORD must be defined in server/.env before seeding the admin account.");const adminEmail=process.env.ADMIN_EMAIL.toLowerCase();const existingAdmin=await User.findOne({email:adminEmail});if(existingAdmin){existingAdmin.role="ADMIN";existingAdmin.isVerified=true;existingAdmin.isPaymentSupport=true;await existingAdmin.save();console.log(`Admin/payment support user ready: ${adminEmail}`)}else{const hashedPassword=await hashPassword(process.env.ADMIN_PASSWORD);await User.create({name:"Platform Admin",username:process.env.ADMIN_USERNAME,email:adminEmail,password:hashedPassword,role:"ADMIN",isVerified:true,isPaymentSupport:true});console.log(`Created admin/payment support user: ${adminEmail}`)}console.log("\nDatabase seeding completed successfully.")}catch(error){console.error("\nDatabase seeding failed.");console.error("Error:",error.message);process.exitCode=1}finally{await mongoose.disconnect()}};seedDatabase();
+
+const seedDatabase = async () => {
+  try {
+    console.log("Connecting to database...");
+    await connectDatabase();
+    console.log("MongoDB ping successful.");
+
+    await Celebrity.deleteMany({});
+    await MeetingType.deleteMany({});
+    await Gift.deleteMany({});
+
+    const celebrity = await Celebrity.create(celebrityData);
+
+    // Upsert plans by slug so existing memberships never lose their plan reference.
+    for (const plan of membershipData) {
+      await MembershipPlan.findOneAndUpdate(
+        { slug: plan.slug },
+        { $set: plan },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+    }
+
+    await MeetingType.insertMany(meetingData);
+    await Gift.insertMany(giftData);
+
+    console.log(`Created celebrity: ${celebrity.name}`);
+    console.log(`Upserted ${membershipData.length} membership plans.`);
+    console.log(`Created ${meetingData.length} meeting types.`);
+    console.log(`Created ${giftData.length} gifts.`);
+
+    if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_USERNAME || !process.env.ADMIN_PASSWORD) {
+      throw new Error("ADMIN_EMAIL, ADMIN_USERNAME and ADMIN_PASSWORD must be defined in server/.env before seeding the admin account.");
+    }
+
+    const adminEmail = process.env.ADMIN_EMAIL.toLowerCase();
+    const existingAdmin = await User.findOne({ email: adminEmail });
+    if (existingAdmin) {
+      existingAdmin.role = "ADMIN";
+      existingAdmin.isVerified = true;
+      existingAdmin.isPaymentSupport = true;
+      await existingAdmin.save();
+      console.log(`Admin/payment support user ready: ${adminEmail}`);
+    } else {
+      const hashedPassword = await hashPassword(process.env.ADMIN_PASSWORD);
+      await User.create({
+        name: "Platform Admin",
+        username: process.env.ADMIN_USERNAME,
+        email: adminEmail,
+        password: hashedPassword,
+        role: "ADMIN",
+        isVerified: true,
+        isPaymentSupport: true,
+      });
+      console.log(`Created admin/payment support user: ${adminEmail}`);
+    }
+
+    console.log("\nDatabase seeding completed successfully.");
+  } catch (error) {
+    console.error("\nDatabase seeding failed.");
+    console.error("Error:", error.message);
+    process.exitCode = 1;
+  } finally {
+    await mongoose.disconnect();
+  }
+};
+
+seedDatabase();
