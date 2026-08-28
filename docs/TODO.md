@@ -67,6 +67,7 @@
 - [x] Give each membership tier a distinct card design treatment
 - [x] Use supplied Keanu Reeves signature asset on VIP cards only
 - [x] Align membership-page card presentation with print-preview geometry
+- [x] Make all five membership tiers available for purchase
 - [ ] Accessibility review
 
 ## Product features
