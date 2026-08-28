@@ -56,6 +56,7 @@
 - [ ] Add payment configuration management UI
 - [ ] Centralize API client
 - [ ] Complete responsive UI
+- [x] Harden membership card responsive layout and prevent detail overlap
 - [ ] Accessibility review
 
 ## Product features
