@@ -8,7 +8,6 @@
 - [x] Remove wallet models, services, routes and UI
 - [x] Remove saved payment-method UI and provider callbacks
 - [x] Keep membership purchases, meeting booking and gift gifting intact
-- [x] Add Crypto as the default payment method
 - [x] Add configurable crypto options and network-specific wallet destinations
 - [x] Add gift-card payment method and configurable brands/instructions
 - [x] Add payment-proof submission state
@@ -19,6 +18,9 @@
 - [x] Add payment-proof file validation and 5 MB size limit
 - [x] Add admin payment configuration UI
 - [x] Seed initial crypto wallet/gift-card configuration
+- [x] Allow purchase request creation before the member chooses a payment method
+- [x] Persist the selected payment method immediately from the payment page
+- [x] Revalidate the selected payment method when payment proof is submitted
 - [ ] Run index migration locally
 - [ ] Run backend/frontend tests after payment refactor
 - [ ] Add manual payment integration tests
@@ -39,7 +41,10 @@
 - [x] Remove provider webhook/reconciliation startup dependencies
 - [x] Add authenticated member profile photo update endpoint
 - [x] Validate and size-limit stored profile photos
-- [ ] Add payment configuration model/API
+- [x] Add payment configuration model/API
+- [x] Expose a recommended active membership plan with a safe fallback
+- [x] Add authenticated payment-method selection endpoint
+- [x] Enforce a single recommended active membership plan in admin catalog updates
 - [ ] Centralize API error handling
 - [ ] Add authentication/payment rate limiting
 - [ ] Add stale pending-payment cleanup
@@ -61,6 +66,12 @@
 - [x] Replace proof URL/data-URL persistence with protected stored-file retrieval
 - [x] Add payment configuration management UI
 - [x] Style and structure payment configuration administration page
+- [x] Show payment-method choices after creating a purchase request
+- [x] Prevent the payment page from auto-selecting a crypto method
+- [x] Persist the selected payment method immediately before proof submission
+- [x] Revalidate payment method selection on proof submission
+- [x] Add recommended membership-plan badge and styling
+- [x] Add admin control for the recommended membership plan
 - [ ] Centralize API client
 - [x] Complete responsive membership card layout
 - [x] Harden membership card responsive layout and prevent detail overlap
@@ -87,6 +98,7 @@
 ## Product features
 - [x] Membership dashboard and digital card UI
 - [x] Five membership tiers: Supporter, Insider, Premier, Elite, VIP
+- [x] Recommended membership plan: Insider
 - [x] Meeting availability/calendar UI
 - [x] Gift history and gifting UX
 - [x] Notification center
