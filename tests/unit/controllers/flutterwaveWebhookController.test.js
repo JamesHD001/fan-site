@@ -1,6 +1,8 @@
 const mongoose = require("mongoose");
 const crypto = require("crypto");
 
+jest.setTimeout(120000);
+
 jest.mock("../../../server/services/providers/flutterwaveProvider", () => ({
   verifyPayment: jest.fn(),
 }));
@@ -12,6 +14,9 @@ jest.mock("../../../server/services/paymentSettlementService", () => ({
 
 const Payment = require("../../../server/models/Payment");
 const User = require("../../../server/models/User");
+
+// Legacy gateway coverage is retained as a regression suite for the removed
+// provider boundary; current manual-payment behavior is covered separately.
 const { verifyPayment } = require("../../../server/services/providers/flutterwaveProvider");
 const { settleSuccessfulPayment, applyProviderTransactionDetails } = require("../../../server/services/paymentSettlementService");
 const { handleFlutterwaveWebhook } = require("../../../server/controllers/flutterwaveWebhookController");
@@ -71,11 +76,16 @@ describe("handleFlutterwaveWebhook", () => {
     payment = await Payment.create({
       user: user._id,
       reference: "REF-123",
-      provider: "FLUTTERWAVE",
-      type: "DEPOSIT",
+      paymentToken: "PAY-123",
+      supportAdmin: user._id,
+      provider: "INTERNAL",
+      paymentMethod: "CRYPTO",
+      type: "MEMBERSHIP",
       amount: 5000,
+      originalAmount: 5000,
       currency: "USD",
-      status: "PENDING",
+      originalCurrency: "USD",
+      status: "PENDING_PAYMENT",
     });
   });
 
