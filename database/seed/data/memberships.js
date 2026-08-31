@@ -25,7 +25,7 @@ module.exports = [
     name: "Insider",
     slug: "insider",
     description: "An enhanced membership for fans who want deeper access to the community experience.",
-    price: 250000,
+    price: 150000,
     currency: "USD",
     duration: 1,
     durationUnit: "YEAR",

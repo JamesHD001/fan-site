@@ -20,10 +20,10 @@ const careerMilestones = [
 ]
 
 const membershipPreview = [
-  { name: 'Supporter', price: '$1,000', description: 'A recognized place in the community with a digital membership card and exclusive updates.' },
-  { name: 'Insider', price: '$3,500', description: 'Deeper access with premium content, priority selected events and an enhanced membership card.' },
-  { name: 'Premier', price: '$5,000', description: 'A distinguished tier with expanded content, event priority and Premier recognition.' },
-  { name: 'Elite', price: '$7,500', description: 'Elevated access, premium recognition and priority experiences for dedicated members.' },
+  { name: 'Supporter', price: '$500', description: 'A recognized place in the community with a digital membership card and exclusive updates.' },
+  { name: 'Insider', price: '$1,500', description: 'Deeper access with premium content, priority selected events and an enhanced membership card.' },
+  { name: 'Premier', price: '$3,500', description: 'A distinguished tier with expanded content, event priority and Premier recognition.' },
+  { name: 'Elite', price: '$5,000', description: 'Elevated access, premium recognition and priority experiences for dedicated members.' },
   { name: 'VIP', price: '$10,000', description: 'The highest tier with VIP experiences, priority access and an exclusive celebrity-edition card.' },
 ]
 
