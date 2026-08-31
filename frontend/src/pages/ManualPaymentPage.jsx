@@ -21,6 +21,8 @@ export default function ManualPaymentPage() {
   const [crypto, setCrypto] = useState('');
   const [network, setNetwork] = useState('');
   const [giftCard, setGiftCard] = useState('');
+  const [selectionSaved, setSelectionSaved] = useState(false);
+  const [selectionSaving, setSelectionSaving] = useState(false);
   const [proof, setProof] = useState('');
   const [proofName, setProofName] = useState('');
   const [proofType, setProofType] = useState('');
@@ -60,9 +62,11 @@ export default function ManualPaymentPage() {
         setMethod('CRYPTO');
         setCrypto(paymentData.payment.crypto?.currency || '');
         setNetwork(paymentData.payment.crypto?.network || '');
+        setSelectionSaved(Boolean(paymentData.payment.crypto?.currency && paymentData.payment.crypto?.network));
       } else if (paymentData.payment?.paymentMethod === 'GIFTCARD') {
         setMethod('GIFTCARD');
         setGiftCard(paymentData.payment.giftCard?.brand || '');
+        setSelectionSaved(Boolean(paymentData.payment.giftCard?.brand));
       }
     };
 
@@ -106,6 +110,54 @@ export default function ManualPaymentPage() {
     setProofType('');
   };
 
+  const savePaymentSelection = async ({ nextMethod, nextCrypto = '', nextNetwork = '', nextGiftCard = '' }) => {
+    setSelectionSaving(true);
+    setSelectionSaved(false);
+    setError('');
+
+    try {
+      const response = await fetch(`${API}/payments/mine/${encodeURIComponent(paymentToken)}/method`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          paymentMethod: nextMethod,
+          cryptoCurrency: nextMethod === 'CRYPTO' ? nextCrypto : undefined,
+          cryptoNetwork: nextMethod === 'CRYPTO' ? nextNetwork : undefined,
+          giftCardBrand: nextMethod === 'GIFTCARD' ? nextGiftCard : undefined,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || 'Unable to save payment method.');
+
+      setPayment(data.payment);
+      setSelectionSaved(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSelectionSaving(false);
+    }
+  };
+
+  const chooseCrypto = (option) => {
+    setMethod('CRYPTO');
+    setGiftCard('');
+    setCrypto(option.currency);
+    setNetwork(option.network);
+    savePaymentSelection({ nextMethod: 'CRYPTO', nextCrypto: option.currency, nextNetwork: option.network });
+  };
+
+  const chooseGiftCard = (option) => {
+    setMethod('GIFTCARD');
+    setCrypto('');
+    setNetwork('');
+    setGiftCard(option.brand);
+    savePaymentSelection({ nextMethod: 'GIFTCARD', nextGiftCard: option.brand });
+  };
+
   const selectedCrypto = options.cryptoOptions.find(
     (option) => option.currency === crypto && option.network === network,
   );
@@ -113,7 +165,7 @@ export default function ManualPaymentPage() {
   const hasCrypto = options.cryptoOptions.length > 0;
   const hasGiftCards = options.giftCardOptions.length > 0;
   const hasMethods = hasCrypto || hasGiftCards;
-  const selectionReady = method === 'CRYPTO' ? Boolean(selectedCrypto) : method === 'GIFTCARD' ? Boolean(selectedGiftCard) : false;
+  const selectionReady = selectionSaved && (method === 'CRYPTO' ? Boolean(selectedCrypto) : method === 'GIFTCARD' ? Boolean(selectedGiftCard) : false);
 
   const submitProof = async () => {
     if (!selectionReady) {
@@ -201,8 +253,8 @@ export default function ManualPaymentPage() {
                 <p className="auth-error">No payment methods are currently configured. Please contact payment support.</p>
               ) : (
                 <div className="payment-method-tabs">
-                  {hasCrypto && <button className={method === 'CRYPTO' ? 'active' : ''} onClick={() => { setMethod('CRYPTO'); setGiftCard(''); }} type="button">🪙 Crypto</button>}
-                  {hasGiftCards && <button className={method === 'GIFTCARD' ? 'active' : ''} onClick={() => { setMethod('GIFTCARD'); setCrypto(''); setNetwork(''); }} type="button">🎁 Gift Cards</button>}
+                  {hasCrypto && <button className={method === 'CRYPTO' ? 'active' : ''} onClick={() => { setMethod('CRYPTO'); setGiftCard(''); setSelectionSaved(false); setError(''); }} type="button">🪙 Crypto</button>}
+                  {hasGiftCards && <button className={method === 'GIFTCARD' ? 'active' : ''} onClick={() => { setMethod('GIFTCARD'); setCrypto(''); setNetwork(''); setSelectionSaved(false); setError(''); }} type="button">🎁 Gift Cards</button>}
                 </div>
               )}
             </section>
@@ -212,7 +264,7 @@ export default function ManualPaymentPage() {
                 <h2>Select cryptocurrency &amp; network</h2>
                 <div className="payment-choice-grid">
                   {options.cryptoOptions.map((option) => (
-                    <button key={`${option.currency}-${option.network}`} className={crypto === option.currency && network === option.network ? 'selected' : ''} onClick={() => { setCrypto(option.currency); setNetwork(option.network); }} type="button">
+                    <button key={`${option.currency}-${option.network}`} className={crypto === option.currency && network === option.network ? 'selected' : ''} disabled={selectionSaving} onClick={() => chooseCrypto(option)} type="button">
                       {option.currency}<small>{option.network}</small>
                     </button>
                   ))}
@@ -221,7 +273,7 @@ export default function ManualPaymentPage() {
                   <p>Send your payment using</p>
                   <strong>{selectedCrypto.currency} · {selectedCrypto.network}</strong>
                   <label>Wallet address<input readOnly value={selectedCrypto.walletAddress} /></label>
-                  <button className="secondary-button" onClick={() => navigator.clipboard?.writeText(selectedCrypto.walletAddress)} type="button">Copy wallet address</button>
+                  <button className="secondary-button" disabled={selectionSaving} onClick={() => navigator.clipboard?.writeText(selectedCrypto.walletAddress)} type="button">{selectionSaving ? 'Saving selection…' : 'Copy wallet address'}</button>
                   <p className="muted">Contact <strong>{payment.supportAdmin?.name}</strong> if you need payment instructions. Include token <strong>{payment.paymentToken}</strong>.</p>
                 </div>}
               </section>
@@ -231,7 +283,7 @@ export default function ManualPaymentPage() {
               <section className="payment-option-panel">
                 <h2>Select gift card</h2>
                 <div className="payment-choice-grid">
-                  {options.giftCardOptions.map((option) => <button key={option._id} className={giftCard === option.brand ? 'selected' : ''} onClick={() => setGiftCard(option.brand)} type="button">{option.brand}</button>)}
+                  {options.giftCardOptions.map((option) => <button key={option._id} className={giftCard === option.brand ? 'selected' : ''} disabled={selectionSaving} onClick={() => chooseGiftCard(option)} type="button">{option.brand}</button>)}
                 </div>
                 {selectedGiftCard && <div className="wallet-box"><h3>{selectedGiftCard.brand}</h3><p>{selectedGiftCard.instructions}</p><p className="muted">Contact <strong>{payment.supportAdmin?.name}</strong> and provide token <strong>{payment.paymentToken}</strong> for the exact gift-card instructions.</p></div>}
               </section>
@@ -244,7 +296,7 @@ export default function ManualPaymentPage() {
               <p>{rejected ? 'Review the administrator feedback, correct the issue, and upload new proof for review.' : 'Upload a screenshot of the transaction or your payment receipt. The designated administrator will review it before your purchase is completed.'}</p>
               <label className="proof-upload"><span>Payment screenshot / receipt</span><input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={chooseProof} /><small>JPG, PNG, WEBP or PDF · maximum 5 MB</small></label>
               {proof && <div className="proof-selected"><strong>{proofName}</strong><span>{proofType === 'application/pdf' ? 'PDF receipt' : 'Image selected'}</span><button className="secondary-button" onClick={clearProof} type="button">Remove</button></div>}
-              <button className="primary-button" disabled={busy || !selectionReady || !proof} onClick={submitProof} type="button">{busy ? 'Submitting…' : rejected ? 'Submit replacement proof' : 'Submit payment proof'}</button>
+              <button className="primary-button" disabled={busy || selectionSaving || !selectionReady || !proof} onClick={submitProof} type="button">{busy ? 'Submitting…' : selectionSaving ? 'Saving payment method…' : rejected ? 'Submit replacement proof' : 'Submit payment proof'}</button>
             </section>
 
             {error && <p className="auth-error">{error}</p>}
