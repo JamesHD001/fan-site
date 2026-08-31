@@ -19,7 +19,8 @@
 - [x] Add admin payment configuration UI
 - [x] Seed initial crypto wallet/gift-card configuration
 - [x] Allow purchase request creation before the member chooses a payment method
-- [x] Require and persist the selected payment method with payment proof
+- [x] Persist the selected payment method immediately from the payment page
+- [x] Revalidate the selected payment method when payment proof is submitted
 - [ ] Run index migration locally
 - [ ] Run backend/frontend tests after payment refactor
 - [ ] Add manual payment integration tests
@@ -42,6 +43,8 @@
 - [x] Validate and size-limit stored profile photos
 - [x] Add payment configuration model/API
 - [x] Expose a recommended active membership plan with a safe fallback
+- [x] Add authenticated payment-method selection endpoint
+- [x] Enforce a single recommended active membership plan in admin catalog updates
 - [ ] Centralize API error handling
 - [ ] Add authentication/payment rate limiting
 - [ ] Add stale pending-payment cleanup
@@ -65,8 +68,10 @@
 - [x] Style and structure payment configuration administration page
 - [x] Show payment-method choices after creating a purchase request
 - [x] Prevent the payment page from auto-selecting a crypto method
-- [x] Persist the selected payment method, crypto/network, or gift-card brand with proof submission
+- [x] Persist the selected payment method immediately before proof submission
+- [x] Revalidate payment method selection on proof submission
 - [x] Add recommended membership-plan badge and styling
+- [x] Add admin control for the recommended membership plan
 - [ ] Centralize API client
 - [x] Complete responsive membership card layout
 - [x] Harden membership card responsive layout and prevent detail overlap
