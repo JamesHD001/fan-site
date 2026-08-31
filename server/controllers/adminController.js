@@ -64,7 +64,12 @@ const updateUser = async (req, res) => {
     if (String(req.params.id) === String(req.user._id) && req.body.role && req.body.role !== "ADMIN") {
       return res.status(400).json({ success: false, message: "You cannot remove administrator privileges from your own account." });
     }
-    const user = await User.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true }).select("-password");
+    const allowedFields = ["name", "username", "email", "role", "isActive", "profileImage"];
+    const updates = {};
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) updates[field] = req.body[field];
+    }
+    const user = await User.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true }).select("-password");
     if (!user) return res.status(404).json({ success: false, message: "User not found." });
     return res.json({ success: true, data: user });
   } catch (e) {
@@ -100,19 +105,26 @@ const deleteUser = async (req, res) => {
 
     // Other administrator accounts, including test/admin accounts, may be deleted.
     // The currently authenticated administrator is the only protected account here.
-    await Membership.deleteMany({ user: user._id });
-    await Booking.deleteMany({ user: user._id });
-    await GiftTransaction.deleteMany({ user: user._id });
-    await Payment.deleteMany({ user: user._id });
-    await Post.deleteMany({ author: user._id });
-    await Comment.deleteMany({ author: user._id });
-    await Like.deleteMany({ user: user._id });
-    await Notification.deleteMany({ user: user._id });
-    await OtpVerification.deleteMany({ user: user._id });
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        await Membership.deleteMany({ user: user._id }, { session });
+        await Booking.deleteMany({ user: user._id }, { session });
+        await GiftTransaction.deleteMany({ user: user._id }, { session });
+        await Payment.deleteMany({ user: user._id }, { session });
+        await Post.deleteMany({ author: user._id }, { session });
+        await Comment.deleteMany({ author: user._id }, { session });
+        await Like.deleteMany({ user: user._id }, { session });
+        await Notification.deleteMany({ user: user._id }, { session });
+        await OtpVerification.deleteMany({ user: user._id }, { session });
 
-    const deletedUser = await User.findByIdAndDelete(user._id);
-    if (!deletedUser) {
-      return res.status(404).json({ success: false, message: "User was not found during deletion." });
+        const deletedUser = await User.findByIdAndDelete(user._id, { session });
+        if (!deletedUser) {
+          throw new Error("User was not found during deletion.");
+        }
+      });
+    } finally {
+      await session.endSession();
     }
 
     return res.json({
@@ -129,8 +141,13 @@ const getPayments = async (req, res) => {
   try {
     const query = {};
     if (req.query.status) query.status = req.query.status;
-    const payments = await Payment.find(query).populate("user", "name email username").populate("supportAdmin", "name email username").sort({ createdAt: -1 });
-    return res.json({ success: true, data: { payments } });
+    const page = Math.max(Number(req.query.page) || 1, 1);
+    const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100);
+    const [payments, total] = await Promise.all([
+      Payment.find(query).populate("user", "name email username").populate("supportAdmin", "name email username").sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
+      Payment.countDocuments(query)
+    ]);
+    return res.json({ success: true, data: { payments, pagination: { page, limit, total, pages: Math.ceil(total / limit) || 1 } } });
   } catch (e) {
     return res.status(500).json({ success: false, message: "Unable to retrieve payments." });
   }
@@ -172,65 +189,42 @@ const updateGiftStatus = async (req, res) => {
   }
 };
 
-const getGiftsAdmin = async (req, res) => {
-  try {
-    const Gift = require("../models/Gift");
-    return res.json({ success: true, data: { gifts: await Gift.find().sort({ createdAt: -1 }) } });
-  } catch (e) {
-    return res.status(500).json({ success: false, message: "Unable to retrieve gifts." });
-  }
-};
-
-const updateGift = async (req, res) => {
-  try {
-    const Gift = require("../models/Gift");
-    const gift = await Gift.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-    if (!gift) return res.status(404).json({ success: false, message: "Gift not found." });
-    return res.json({ success: true, data: { gift } });
-  } catch (e) {
-    return res.status(500).json({ success: false, message: "Unable to update gift." });
-  }
-};
-
-const getMembershipPlansAdmin = async (req, res) => {
-  try {
-    const MembershipPlan = require("../models/MembershipPlan");
-    return res.json({ success: true, data: { plans: await MembershipPlan.find().sort({ createdAt: -1 }) } });
-  } catch (e) {
-    return res.status(500).json({ success: false, message: "Unable to retrieve membership plans." });
-  }
-};
-
-const updateMembershipPlan = async (req, res) => {
-  try {
-    const MembershipPlan = require("../models/MembershipPlan");
-    const plan = await MembershipPlan.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-    if (!plan) return res.status(404).json({ success: false, message: "Membership plan not found." });
-    return res.json({ success: true, data: { plan } });
-  } catch (e) {
-    return res.status(500).json({ success: false, message: "Unable to update membership plan." });
+const createCrudHandlers = ({ modelPath, label, listKey }) => {
+  const getItems = async (req, res) => {
+    try {
+      const Model = require(modelPath);
+      const items = await Model.find().sort({ createdAt: -1 });
+      return res.json({ success: true, data: { [listKey]: items } });
+    } catch (e) {
+      return res.status(500).json({ success: false, message: `Unable to retrieve ${label}s.` });
     }
+  };
+
+  const updateItem = async (req, res) => {
+    try {
+      const Model = require(modelPath);
+      const item = await Model.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+      if (!item) return res.status(404).json({ success: false, message: `${label} not found.` });
+      return res.json({ success: true, data: { [listKey.slice(0, -1)]: item } });
+    } catch (e) {
+      return res.status(500).json({ success: false, message: `Unable to update ${label}.` });
+    }
+  };
+
+  return { getItems, updateItem };
 };
 
-const getMeetingTypesAdmin = async (req, res) => {
-  try {
-    const MeetingType = require("../models/MeetingType");
-    return res.json({ success: true, data: { meetings: await MeetingType.find().sort({ createdAt: -1 }) } });
-  } catch (e) {
-    return res.status(500).json({ success: false, message: "Unable to retrieve meeting types." });
-  }
-};
+const giftHandlers = createCrudHandlers({ modelPath: "../models/Gift", label: "Gift", listKey: "gifts" });
+const getGiftsAdmin = giftHandlers.getItems;
+const updateGift = giftHandlers.updateItem;
 
-const updateMeetingType = async (req, res) => {
-  try {
-    const MeetingType = require("../models/MeetingType");
-    const meeting = await MeetingType.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-    if (!meeting) return res.status(404).json({ success: false, message: "Meeting type not found." });
-    return res.json({ success: true, data: { meeting } });
-  } catch (e) {
-    return res.status(500).json({ success: false, message: "Unable to update meeting type." });
-  }
-};
+const membershipPlanHandlers = createCrudHandlers({ modelPath: "../models/MembershipPlan", label: "Membership plan", listKey: "plans" });
+const getMembershipPlansAdmin = membershipPlanHandlers.getItems;
+const updateMembershipPlan = membershipPlanHandlers.updateItem;
+
+const meetingTypeHandlers = createCrudHandlers({ modelPath: "../models/MeetingType", label: "Meeting type", listKey: "meetings" });
+const getMeetingTypesAdmin = meetingTypeHandlers.getItems;
+const updateMeetingType = meetingTypeHandlers.updateItem;
 
 const getPendingPosts = async (req, res) => {
   try {
