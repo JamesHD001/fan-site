@@ -72,6 +72,7 @@
 - [x] Revalidate payment method selection on proof submission
 - [x] Add recommended membership-plan badge and styling
 - [x] Add admin control for the recommended membership plan
+- [x] Refine payment-page typography, labels, hierarchy, and responsive text styling
 - [ ] Centralize API client
 - [x] Complete responsive membership card layout
 - [x] Harden membership card responsive layout and prevent detail overlap
