@@ -9,8 +9,25 @@ const userSchema = new mongoose.Schema({
   role: { type: String, enum: ["USER", "ADMIN", "MODERATOR"], default: "USER" },
   isPaymentSupport: { type: Boolean, default: false, index: true },
   isVerified: { type: Boolean, default: false },
+  emailVerified: { type: Boolean, default: false },
   isActive: { type: Boolean, default: true },
   lastLogin: { type: Date, default: null },
+  
+  // Phone verification
+  phoneNumber: { type: String, default: null, trim: true },
+  phoneNumberVerified: { type: Boolean, default: false },
+  phoneVerificationToken: { type: String, default: null, select: false },
+  
+  // Two-Factor Authentication (2FA/TOTP)
+  twoFactorEnabled: { type: Boolean, default: false, index: true },
+  twoFactorSecret: { type: String, default: null, select: false }, // Encrypted TOTP secret
+  backupCodes: { type: [String], default: [], select: false }, // Array of backup codes (hashed)
+  
+  // Security settings
+  requireOtpOnLogin: { type: Boolean, default: false }, // User preference for OTP on login
+  passwordChangedAt: { type: Date, default: null },
+  loginAttempts: { type: Number, default: 0 },
+  accountLockedUntil: { type: Date, default: null },
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", userSchema);

@@ -12,18 +12,21 @@ A full-stack celebrity fan-community platform developed as a student software en
 ## Technology Stack
 
 ### Frontend
+
 - React
 - Vite
 - React Router
 - Axios
 
 ### Backend
+
 - Node.js
 - Express
 - MongoDB
 - Mongoose
 
 ### Payment
+
 - Paystack
 
 ## Status
