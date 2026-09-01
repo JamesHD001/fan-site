@@ -6,22 +6,22 @@ const { createOtp, verifyOtp } = require("../services/otpService");
 const MAX_PROFILE_IMAGE_BYTES = 140 * 1024;
 const PROFILE_IMAGE_PATTERN = /^data:image\/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=]+)$/i;
 
-const sanitizeUser = (user) => ({ 
-  id: user._id, 
-  name: user.name, 
-  username: user.username, 
-  email: user.email, 
-  profileImage: user.profileImage, 
-  role: user.role, 
-  isVerified: user.isVerified, 
+const sanitizeUser = (user) => ({
+  id: user._id,
+  name: user.name,
+  username: user.username,
+  email: user.email,
+  profileImage: user.profileImage,
+  role: user.role,
+  isVerified: user.isVerified,
   emailVerified: user.emailVerified,
-  isActive: user.isActive, 
-  lastLogin: user.lastLogin, 
+  isActive: user.isActive,
+  lastLogin: user.lastLogin,
   phoneNumber: user.phoneNumber,
   phoneNumberVerified: user.phoneNumberVerified,
   twoFactorEnabled: user.twoFactorEnabled,
   requireOtpOnLogin: user.requireOtpOnLogin,
-  createdAt: user.createdAt 
+  createdAt: user.createdAt
 });
 
 const validateRegistrationInput = (body) => {
@@ -64,65 +64,79 @@ const verifyRegistration = async (req, res) => {
     if (!result.valid) return res.status(400).json({ success: false, message: result.message });
     const existingUser = await User.findOne({ $or: [{ email: normalizedEmail }, { username: normalizedUsername }] });
     if (existingUser) return res.status(409).json({ success: false, message: "Email or username is already registered." });
-    const user = await User.create({ 
-      name, 
-      username: normalizedUsername, 
-      email: normalizedEmail, 
-      password: await hashPassword(password), 
+    const user = await User.create({
+      name,
+      username: normalizedUsername,
+      email: normalizedEmail,
+      password: await hashPassword(password),
       isVerified: true,
-      emailVerified: true 
+      emailVerified: true
     });
     return res.status(201).json({ success: true, message: "Account created and email verified successfully.", token: generateToken(user), user: sanitizeUser(user) });
-  } catch (error) { 
-    console.error("Registration verification error:", error); 
-    return res.status(500).json({ success: false, message: "Unable to verify registration." }); 
+  } catch (error) {
+    console.error("Registration verification error:", error);
+    return res.status(500).json({ success: false, message: "Unable to verify registration." });
   }
 };
 
-const login = async (req, res) => { 
-  try { 
-    const { email, password } = req.body; 
-    const normalizedEmail = String(email || "").trim().toLowerCase(); 
-    const user = await User.findOne({ email: normalizedEmail }).select("+password +loginAttempts +accountLockedUntil"); 
-    if (!user) return res.status(401).json({ success: false, message: "Invalid email or password." }); 
-    if (!user.isActive) return res.status(403).json({ success: false, message: "This account has been disabled." }); 
-    
+const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const normalizedEmail = String(email || "").trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail }).select("+password +loginAttempts +accountLockedUntil");
+    if (!user) return res.status(401).json({ success: false, message: "Invalid email or password." });
+    if (!user.isActive) return res.status(403).json({ success: false, message: "This account has been disabled." });
+
     // Check if account is locked
     if (user.accountLockedUntil && user.accountLockedUntil.getTime() > Date.now()) {
       return res.status(429).json({ success: false, message: "Account temporarily locked. Please try again later." });
     }
-    
+
     if (!await comparePassword(password, user.password)) {
       user.loginAttempts = (user.loginAttempts || 0) + 1;
       if (user.loginAttempts >= 5) {
         user.accountLockedUntil = new Date(Date.now() + 30 * 60 * 1000); // Lock for 30 minutes
       }
       await user.save();
-      return res.status(401).json({ success: false, message: "Invalid email or password." }); 
+      return res.status(401).json({ success: false, message: "Invalid email or password." });
     }
-    
+
     // Reset login attempts on successful password
     user.loginAttempts = 0;
-    
+
+    // Existing accounts created before email verification was required must verify
+    // before a session token can be issued.
+    if (!user.isVerified || !user.emailVerified) {
+      await createOtp({ email: normalizedEmail, purpose: "ACCOUNT_VERIFICATION" });
+      await user.save();
+      return res.status(202).json({
+        success: true,
+        requiresOtp: true,
+        otpPurpose: "ACCOUNT_VERIFICATION",
+        message: "A verification code has been sent to your email. Please verify your account to continue.",
+        email: normalizedEmail
+      });
+    }
+
     // Check if 2FA is required and enabled
     if (user.twoFactorEnabled && user.requireOtpOnLogin) {
       await createOtp({ email: normalizedEmail, purpose: "LOGIN" });
       await user.save();
-      return res.status(202).json({ 
-        success: true, 
-        requiresOtp: true, 
+      return res.status(202).json({
+        success: true,
+        requiresOtp: true,
         message: "A verification code has been sent to your email. Please verify to complete login.",
-        email: normalizedEmail 
+        email: normalizedEmail
       });
     }
-    
+
     // OTP not required, complete login
-    user.lastLogin = new Date(); 
-    await user.save(); 
-    return res.json({ success: true, message: "Login successful.", token: generateToken(user), user: sanitizeUser(user) }); 
-  } catch (error) { 
-    console.error("Login error:", error); 
-    return res.status(500).json({ success: false, message: "Unable to login." }); 
+    user.lastLogin = new Date();
+    await user.save();
+    return res.json({ success: true, message: "Login successful.", token: generateToken(user), user: sanitizeUser(user) });
+  } catch (error) {
+    console.error("Login error:", error);
+    return res.status(500).json({ success: false, message: "Unable to login." });
   }
 };
 const getCurrentUser = async (req, res) => { try { return res.status(200).json({ success: true, user: sanitizeUser(req.user) }); } catch (error) { return res.status(500).json({ success: false, message: "Unable to retrieve user information." }); } };
@@ -146,13 +160,18 @@ const updateProfileImage = async (req, res) => {
 
 const verifyLoginOtp = async (req, res) => {
   try {
-    const { email, otp } = req.body;
+    const { email, otp, purpose = "LOGIN" } = req.body;
     if (!email || !otp) return res.status(400).json({ success: false, message: "Email and verification code are required." });
+    if (!["LOGIN", "ACCOUNT_VERIFICATION"].includes(purpose)) return res.status(400).json({ success: false, message: "Invalid verification request." });
     const normalizedEmail = String(email).trim().toLowerCase();
-    const result = await verifyOtp({ email: normalizedEmail, purpose: "LOGIN", otp });
+    const result = await verifyOtp({ email: normalizedEmail, purpose, otp });
     if (!result.valid) return res.status(400).json({ success: false, message: result.message });
     const user = await User.findOne({ email: normalizedEmail });
-    if (!user) return res.status(401).json({ success: false, message: "Invalid email or password." });
+    if (!user || !user.isActive) return res.status(401).json({ success: false, message: "Invalid email or password." });
+    if (purpose === "ACCOUNT_VERIFICATION") {
+      user.isVerified = true;
+      user.emailVerified = true;
+    }
     user.lastLogin = new Date();
     user.loginAttempts = 0;
     await user.save();

@@ -3,7 +3,7 @@ const { createOtp, verifyOtp } = require("../services/otpService");
 const requestOtp = async (req, res) => {
   try {
     const { email, purpose } = req.body;
-    if (!email || !["REGISTRATION", "PURCHASE"].includes(purpose)) return res.status(400).json({ success: false, message: "Email and a valid OTP purpose are required." });
+    if (!email || !["REGISTRATION", "PURCHASE", "ACCOUNT_VERIFICATION"].includes(purpose)) return res.status(400).json({ success: false, message: "Email and a valid OTP purpose are required." });
     const result = await createOtp({ email, user: req.user?._id || null, purpose });
     return res.status(201).json({ success: true, message: "A verification code has been sent to your email address.", expiresAt: result.record.expiresAt });
   } catch (error) {
