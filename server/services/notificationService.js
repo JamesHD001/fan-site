@@ -22,5 +22,6 @@ const createNotifications = async (userIds, payload) => {
 const notifyMembershipActivated = (userId, membershipNumber) => createNotification({ userId, type: "MEMBERSHIP", title: "Membership activated", message: `Your membership ${membershipNumber} is now active. Welcome to the community!`, link: "/membership" });
 const notifyBookingConfirmed = (userId, bookingReference, scheduledFor) => createNotification({ userId, type: "BOOKING", title: "Meeting booking confirmed", message: `Your meeting (${bookingReference}) has been confirmed for ${new Date(scheduledFor).toLocaleString()}.`, link: "/meetings" });
 const notifyGiftCompleted = (userId, giftName, quantity) => createNotification({ userId, type: "GIFT", title: "Gift sent successfully", message: `Your gift \"${giftName}\"${quantity > 1 ? ` (x${quantity})` : ""} was sent successfully. Thank you for your support!`, link: "/gifts" });
+const notifyWelcome = (userId, name) => createNotification({ userId, type: "SYSTEM", title: "Welcome to the community", message: `Welcome, ${name}! Complete your profile to personalize your experience and boost your engagement across the platform.`, link: "/settings", metadata: { key: "WELCOME" } });
 
-module.exports = { createNotification, createNotifications, notifyMembershipActivated, notifyBookingConfirmed, notifyGiftCompleted };
+module.exports = { createNotification, createNotifications, notifyMembershipActivated, notifyBookingConfirmed, notifyGiftCompleted, notifyWelcome };

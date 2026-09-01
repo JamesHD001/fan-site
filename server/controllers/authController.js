@@ -2,6 +2,7 @@ const User = require("../models/User");
 const { hashPassword, comparePassword } = require("../utils/password");
 const { generateToken } = require("../utils/jwt");
 const { createOtp, verifyOtp } = require("../services/otpService");
+const { notifyWelcome } = require("../services/notificationService");
 
 const MAX_PROFILE_IMAGE_BYTES = 140 * 1024;
 const PROFILE_IMAGE_PATTERN = /^data:image\/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=]+)$/i;
@@ -72,6 +73,7 @@ const verifyRegistration = async (req, res) => {
       isVerified: true,
       emailVerified: true
     });
+    await notifyWelcome(user._id, user.name);
     return res.status(201).json({ success: true, message: "Account created and email verified successfully.", token: generateToken(user), user: sanitizeUser(user) });
   } catch (error) {
     console.error("Registration verification error:", error);
