@@ -23,6 +23,7 @@ export default function ManualPaymentPage() {
   const [giftCard, setGiftCard] = useState('');
   const [selectionSaved, setSelectionSaved] = useState(false);
   const [selectionSaving, setSelectionSaving] = useState(false);
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [proof, setProof] = useState('');
   const [proofName, setProofName] = useState('');
   const [proofType, setProofType] = useState('');
@@ -245,17 +246,41 @@ export default function ManualPaymentPage() {
           <>
             <section className="payment-option-panel">
               <div className="payment-method-header">
-                <div><span className="eyebrow">STEP 1</span><h2>Choose how you want to pay</h2></div>
+                <div>
+                  <span className="eyebrow">STEP 1</span>
+                  <h2>Choose how you want to pay</h2>
+                </div>
                 <span className="muted">Available payment methods</span>
               </div>
 
               {!hasMethods ? (
-                <p className="auth-error">No payment methods are currently configured. Please contact payment support.</p>
+                <p className="auth-error" role="alert">No payment methods are currently configured. Please contact payment support.</p>
               ) : (
-                <div className="payment-method-tabs">
-                  {hasCrypto && <button className={method === 'CRYPTO' ? 'active' : ''} onClick={() => { setMethod('CRYPTO'); setGiftCard(''); setSelectionSaved(false); setError(''); }} type="button">🪙 Crypto</button>}
-                  {hasGiftCards && <button className={method === 'GIFTCARD' ? 'active' : ''} onClick={() => { setMethod('GIFTCARD'); setCrypto(''); setNetwork(''); setSelectionSaved(false); setError(''); }} type="button">🎁 Gift Cards</button>}
-                </div>
+                <fieldset className="payment-method-tabs" aria-label="Select payment method type">
+                  <legend className="sr-only">Payment Method Selection</legend>
+                  {hasCrypto && (
+                    <button
+                      className={method === 'CRYPTO' ? 'active' : ''}
+                      onClick={() => { setMethod('CRYPTO'); setGiftCard(''); setSelectionSaved(false); setError(''); }}
+                      type="button"
+                      aria-pressed={method === 'CRYPTO'}
+                      aria-label="Pay with cryptocurrency"
+                    >
+                      🪙 Crypto
+                    </button>
+                  )}
+                  {hasGiftCards && (
+                    <button
+                      className={method === 'GIFTCARD' ? 'active' : ''}
+                      onClick={() => { setMethod('GIFTCARD'); setCrypto(''); setNetwork(''); setSelectionSaved(false); setError(''); }}
+                      type="button"
+                      aria-pressed={method === 'GIFTCARD'}
+                      aria-label="Pay with gift cards"
+                    >
+                      🎁 Gift Cards
+                    </button>
+                  )}
+                </fieldset>
               )}
             </section>
 
@@ -269,35 +294,149 @@ export default function ManualPaymentPage() {
                     </button>
                   ))}
                 </div>
-                {selectedCrypto && <div className="wallet-box">
-                  <p>Send your payment using</p>
-                  <strong>{selectedCrypto.currency} · {selectedCrypto.network}</strong>
-                  <label>Wallet address<input readOnly value={selectedCrypto.walletAddress} /></label>
-                  <button className="secondary-button" disabled={selectionSaving} onClick={() => navigator.clipboard?.writeText(selectedCrypto.walletAddress)} type="button">{selectionSaving ? 'Saving selection…' : 'Copy wallet address'}</button>
-                  <p className="muted">Contact <strong>{payment.supportAdmin?.name}</strong> if you need payment instructions. Include token <strong>{payment.paymentToken}</strong>.</p>
-                </div>}
+                {selectedCrypto && (
+                  <div className="wallet-box" role="region" aria-label="Cryptocurrency payment details">
+                    <div className="wallet-box-content">
+                      <div className="wallet-info">
+                        <p className="wallet-label">Send your payment using</p>
+                        <strong className="wallet-method">{selectedCrypto.currency} · {selectedCrypto.network}</strong>
+                        <label className="wallet-address-label">
+                          Wallet address
+                          <input
+                            readOnly
+                            value={selectedCrypto.walletAddress}
+                            aria-label={`Wallet address for ${selectedCrypto.currency}: ${selectedCrypto.walletAddress}`}
+                          />
+                        </label>
+                        <button
+                          className="secondary-button"
+                          disabled={selectionSaving}
+                          onClick={() => navigator.clipboard?.writeText(selectedCrypto.walletAddress)}
+                          type="button"
+                          aria-label="Copy wallet address to clipboard"
+                        >
+                          {selectionSaving ? 'Saving selection…' : 'Copy wallet address'}
+                        </button>
+                      </div>
+                      {selectedCrypto.qrCode && (
+                        <div className="wallet-qr">
+                          <img
+                            src={selectedCrypto.qrCode}
+                            alt={`QR code to scan for sending ${selectedCrypto.currency} payment via ${selectedCrypto.network} network`}
+                            className="qr-code-image"
+                          />
+                          <small className="qr-label">Scan to send payment</small>
+                        </div>
+                      )}
+                    </div>
+                    <p className="wallet-support muted">
+                      Need help? Contact <strong>{payment.supportAdmin?.name}</strong> and include your payment token: <strong className="token">{payment.paymentToken}</strong>
+                    </p>
+                  </div>
+                )}
               </section>
             )}
 
             {method === 'GIFTCARD' && hasGiftCards && (
               <section className="payment-option-panel">
-                <h2>Select gift card</h2>
+                <h2>Select gift card brand</h2>
                 <div className="payment-choice-grid">
-                  {options.giftCardOptions.map((option) => <button key={option._id} className={giftCard === option.brand ? 'selected' : ''} disabled={selectionSaving} onClick={() => chooseGiftCard(option)} type="button">{option.brand}</button>)}
+                  {options.giftCardOptions.map((option) => (
+                    <button
+                      key={option._id}
+                      className={giftCard === option.brand ? 'selected' : ''}
+                      disabled={selectionSaving}
+                      onClick={() => chooseGiftCard(option)}
+                      type="button"
+                      aria-label={`Select ${option.brand} gift card`}
+                      aria-pressed={giftCard === option.brand}
+                    >
+                      {option.brand}
+                    </button>
+                  ))}
                 </div>
-                {selectedGiftCard && <div className="wallet-box"><h3>{selectedGiftCard.brand}</h3><p>{selectedGiftCard.instructions}</p><p className="muted">Contact <strong>{payment.supportAdmin?.name}</strong> and provide token <strong>{payment.paymentToken}</strong> for the exact gift-card instructions.</p></div>}
+                {selectedGiftCard && (
+                  <div className="gift-card-box" role="region" aria-label="Gift card payment details">
+                    <h3 className="gift-card-brand">{selectedGiftCard.brand}</h3>
+                    <div className="gift-card-instructions">
+                      <p>{selectedGiftCard.instructions}</p>
+                    </div>
+                    <p className="gift-card-support muted">
+                      For specific gift card instructions, contact <strong>{payment.supportAdmin?.name}</strong> and provide your payment token: <strong className="token">{payment.paymentToken}</strong>
+                    </p>
+                  </div>
+                )}
               </section>
             )}
 
-            <section className="proof-box">
-              <span className="eyebrow">STEP 2</span>
-              <h2>{rejected ? 'Submit new payment proof' : "I've completed payment"}</h2>
-              {rejected && <div className="payment-rejection"><strong>Administrator feedback</strong><p>{payment.adminNote || 'Your previous proof was not approved. Please submit a new screenshot or receipt.'}</p></div>}
-              <p>{rejected ? 'Review the administrator feedback, correct the issue, and upload new proof for review.' : 'Upload a screenshot of the transaction or your payment receipt. The designated administrator will review it before your purchase is completed.'}</p>
-              <label className="proof-upload"><span>Payment screenshot / receipt</span><input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={chooseProof} /><small>JPG, PNG, WEBP or PDF · maximum 5 MB</small></label>
-              {proof && <div className="proof-selected"><strong>{proofName}</strong><span>{proofType === 'application/pdf' ? 'PDF receipt' : 'Image selected'}</span><button className="secondary-button" onClick={clearProof} type="button">Remove</button></div>}
-              <button className="primary-button" disabled={busy || selectionSaving || !selectionReady || !proof} onClick={submitProof} type="button">{busy ? 'Submitting…' : selectionSaving ? 'Saving payment method…' : rejected ? 'Submit replacement proof' : 'Submit payment proof'}</button>
+            {selectionReady && !paymentCompleted && (
+              <section className="payment-completion-prompt">
+                <p className="completion-message">
+                  Once you've sent the payment using the details above, click the button below to proceed with submitting your payment proof.
+                </p>
+                <button
+                  className="primary-button"
+                  onClick={() => setPaymentCompleted(true)}
+                  type="button"
+                  aria-label="Confirm that you have completed the payment"
+                >
+                  ✓ I've completed payment
+                </button>
+              </section>
+            )}
+
+            {paymentCompleted && (
+              <section className="proof-box">
+                <div className="proof-header">
+                  <div>
+                    <span className="eyebrow">STEP 2</span>
+                    <h2>{rejected ? 'Submit new payment proof' : 'Submit payment proof'}</h2>
+                  </div>
+                </div>
+
+                {rejected && (
+                  <div className="payment-rejection" role="alert" aria-live="polite">
+                    <strong>Administrator feedback</strong>
+                    <p>{payment.adminNote || 'Your previous proof was not approved. Please submit a new screenshot or receipt.'}</p>
+                  </div>
+                )}
+
+                <p className="proof-description">
+                  {rejected
+                    ? 'Review the administrator feedback, correct the issue, and upload new proof for review.'
+                    : 'Upload a screenshot of the transaction or your payment receipt. The designated administrator will review it before your purchase is completed.'}
+                </p>
+
+                <label className="proof-upload">
+                  <span>Payment screenshot / receipt</span>
+                  <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  onChange={chooseProof}
+                  aria-label="Upload payment proof file"
+                />
+                <small>JPG, PNG, WEBP or PDF · maximum 5 MB</small>
+              </label>
+
+              {proof && (
+                <div className="proof-selected" role="status" aria-live="polite">
+                  <strong>{proofName}</strong>
+                  <span>{proofType === 'application/pdf' ? 'PDF receipt' : 'Image selected'}</span>
+                  <button className="secondary-button" onClick={clearProof} type="button">Remove</button>
+                </div>
+              )}
+
+              <button
+                className="primary-button"
+                disabled={busy || selectionSaving || !selectionReady || !proof}
+                onClick={submitProof}
+                type="button"
+                aria-label={rejected ? 'Submit replacement payment proof' : 'Submit payment proof'}
+              >
+                {busy ? 'Submitting…' : selectionSaving ? 'Saving payment method…' : rejected ? 'Submit replacement proof' : 'Submit payment proof'}
+              </button>
             </section>
+            )}
 
             {error && <p className="auth-error">{error}</p>}
           </>
