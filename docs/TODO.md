@@ -45,6 +45,8 @@
 - [x] Expose a recommended active membership plan with a safe fallback
 - [x] Add authenticated payment-method selection endpoint
 - [x] Enforce a single recommended active membership plan in admin catalog updates
+- [x] Align OTP purpose enum with registration verification, login 2FA, and purchase flows
+- [x] Remove duplicate OTP TTL index declaration
 - [ ] Centralize API error handling
 - [ ] Add authentication/payment rate limiting
 - [ ] Add stale pending-payment cleanup
