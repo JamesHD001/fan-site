@@ -25,9 +25,9 @@ A full-stack celebrity fan-community platform developed as a student software en
 - MongoDB
 - Mongoose
 
-### Payment
-
-- Paystack
+### Payments
+- Internal manual payment workflow
+- Crypto and gift-card payment options
 
 ## Status
 
