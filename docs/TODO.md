@@ -52,7 +52,7 @@
 - [x] Allow email or username login
 - [x] Bypass Personal Security Key for administrators/moderators
 - [x] Add trusted-device token model and 30-day remember-device support
-- [ ] Add trusted-device list/revocation UI
+- [x] Add trusted-device management API
 - [ ] Add forgotten Security Key recovery flow after verified email/domain is available
 - [ ] Centralize API error handling
 - [ ] Add authentication/payment rate limiting
@@ -86,7 +86,7 @@
 - [x] Add Personal Security Key login step for members
 - [x] Add 6–10 character Security Key input validation
 - [x] Add Remember This Device option
-- [ ] Add trusted-device management/revocation UI
+- [x] Add trusted-device management/revocation UI
 - [ ] Add Security Key recovery UI after verified email/domain is available
 - [ ] Centralize API client
 - [x] Complete responsive membership card layout
