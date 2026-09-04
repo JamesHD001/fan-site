@@ -128,6 +128,7 @@
 - [x] Fix community post author identity display
 - [x] Display post username alongside author name
 - [x] Send authenticated requests when loading the community feed
+- [x] Make the Notifications navigation item bracketed and red for visibility
 - [ ] Accessibility review
 
 ## Product features
