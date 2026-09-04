@@ -77,8 +77,8 @@ export default function AuthPage({ mode = 'login' }) {
 
   const showingKey = step === 'security-key'
   const setupKey = showingKey && Boolean(generatedKey) && !pendingLogin
-  const title = isLogin ? (showingKey ? (setupKey ? 'Your Personal Security Key' : 'Enter your Security Key') : 'Welcome back') : (showingKey ? 'Your Personal Security Key' : 'Join the community')
-  const intro = setupKey ? 'This key protects your account. Save it somewhere safe before continuing.' : isLogin ? (showingKey ? 'Enter the 6–10 character key you received when your account was created.' : 'Sign in with your email or username and password.') : 'Create your fan account to access memberships, meetings and gifts.'
+  const title = isLogin ? (showingKey ? (setupKey ? 'Your Personal Security Key' : 'Enter your Security Key') : 'Welcome back') : (showingKey ? 'Your Personal Secret Key' : 'Join the community')
+  const intro = setupKey ? 'This key protects your account. Save it somewhere safe before continuing.' : isLogin ? (showingKey ? 'Enter the secret key you received when your account was created.' : 'Sign in with your email or username and password.') : 'Create your fan account to access memberships, meetings and gifts.'
 
   return <main className="auth-page"><section className="auth-card">
     <p className="eyebrow">KEANU REEVES FAN COMMUNITY</p><h1>{title}</h1><p className="auth-intro">{intro}</p>
