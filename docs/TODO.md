@@ -41,6 +41,7 @@
 - [x] Remove provider webhook/reconciliation startup dependencies
 - [x] Add authenticated member profile photo update endpoint
 - [x] Validate and size-limit stored profile photos
+- [x] Allow members to remove their profile photo
 - [x] Add payment configuration model/API
 - [x] Expose a recommended active membership plan with a safe fallback
 - [x] Add authenticated payment-method selection endpoint
@@ -93,6 +94,10 @@
 - [x] Add Personal Security Key rotation UI
 - [x] Show the newly generated Security Key once with copy support
 - [x] Explain trusted-device revocation when the Security Key changes
+- [x] Add profile photo full-size viewer
+- [x] Add profile photo replacement/edit controls
+- [x] Add profile photo removal control
+- [x] Add responsive profile photo viewer styling
 - [ ] Add Security Key recovery UI after verified email/domain is available
 - [ ] Centralize API client
 - [x] Complete responsive membership card layout
