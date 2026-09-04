@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import '../styles/community.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024
@@ -10,15 +11,8 @@ const getAuthorName = (author) => author?.name || author?.username || 'Fan'
 const getAuthorUsername = (author) => author?.username ? `@${author.username}` : ''
 
 const compressImage = (file) => new Promise((resolve, reject) => {
-  if (!file.type.startsWith('image/')) {
-    reject(new Error('Please select an image file.'))
-    return
-  }
-  if (file.size > MAX_IMAGE_SIZE) {
-    reject(new Error('Photo must be 5 MB or smaller.'))
-    return
-  }
-
+  if (!file.type.startsWith('image/')) { reject(new Error('Please select an image file.')); return }
+  if (file.size > MAX_IMAGE_SIZE) { reject(new Error('Photo must be 5 MB or smaller.')); return }
   const reader = new FileReader()
   reader.onerror = () => reject(new Error('Unable to read the selected photo.'))
   reader.onload = () => {
@@ -59,11 +53,8 @@ export default function CommunityPage() {
         const data = await response.json()
         if (!response.ok || !data.success) throw new Error(data.message || 'Unable to load community posts.')
         if (!cancelled) setPosts(data.data?.posts || [])
-      } catch (loadError) {
-        if (!cancelled) setError(loadError.message)
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
+      } catch (loadError) { if (!cancelled) setError(loadError.message) }
+      finally { if (!cancelled) setLoading(false) }
     }
     loadPosts()
     return () => { cancelled = true }
@@ -75,9 +66,7 @@ export default function CommunityPage() {
       const data = await response.json()
       if (!response.ok || !data.success) throw new Error(data.message || 'Unable to load comments.')
       setComments((current) => ({ ...current, [postId]: data.data?.comments || [] }))
-    } catch (commentError) {
-      setError(commentError.message)
-    }
+    } catch (commentError) { setError(commentError.message) }
   }
 
   const toggleLike = async (postId) => {
@@ -87,9 +76,7 @@ export default function CommunityPage() {
       const data = await response.json()
       if (!response.ok || !data.success) throw new Error(data.message || 'Unable to update like.')
       setPosts((current) => current.map((post) => post._id === postId ? { ...post, likedByMe: data.data.liked, likeCount: data.data.likeCount } : post))
-    } catch (likeError) {
-      setError(likeError.message)
-    }
+    } catch (likeError) { setError(likeError.message) }
   }
 
   const submitComment = async (event, postId) => {
@@ -97,18 +84,12 @@ export default function CommunityPage() {
     const content = commentText[postId]?.trim()
     if (!content || !token) return
     try {
-      const response = await fetch(`${API_BASE_URL}/posts/${postId}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ content }),
-      })
+      const response = await fetch(`${API_BASE_URL}/posts/${postId}/comments`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ content }) })
       const data = await response.json()
       if (!response.ok || !data.success) throw new Error(data.message || 'Unable to add comment.')
       setComments((current) => ({ ...current, [postId]: [data.data.comment, ...(current[postId] || [])] }))
       setCommentText((current) => ({ ...current, [postId]: '' }))
-    } catch (commentError) {
-      setError(commentError.message)
-    }
+    } catch (commentError) { setError(commentError.message) }
   }
 
   const handlePhotoChange = async (event) => {
@@ -116,15 +97,9 @@ export default function CommunityPage() {
     if (!file) return
     setError('')
     setImageProcessing(true)
-    try {
-      const image = await compressImage(file)
-      setNewPost((current) => ({ ...current, image }))
-    } catch (photoError) {
-      setError(photoError.message)
-      event.target.value = ''
-    } finally {
-      setImageProcessing(false)
-    }
+    try { setNewPost((current) => ({ ...current, image: await compressImage(file) })) }
+    catch (photoError) { setError(photoError.message); event.target.value = '' }
+    finally { setImageProcessing(false) }
   }
 
   const removePhoto = () => {
@@ -138,21 +113,14 @@ export default function CommunityPage() {
     setSubmitting(true)
     setError('')
     try {
-      const response = await fetch(`${API_BASE_URL}/posts`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(newPost),
-      })
+      const response = await fetch(`${API_BASE_URL}/posts`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(newPost) })
       const data = await response.json()
       if (!response.ok || !data.success) throw new Error(data.message || 'Unable to create post.')
       setPosts((current) => [data.data.post, ...current])
       setNewPost({ title: '', content: '', image: '' })
       if (fileInputRef.current) fileInputRef.current.value = ''
-    } catch (postError) {
-      setError(postError.message)
-    } finally {
-      setSubmitting(false)
-    }
+    } catch (postError) { setError(postError.message) }
+    finally { setSubmitting(false) }
   }
 
   if (loading) return <main className="placeholder-page"><h1>Community</h1><p>Loading posts…</p></main>
