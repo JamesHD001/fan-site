@@ -53,6 +53,8 @@
 - [x] Bypass Personal Security Key for administrators/moderators
 - [x] Add trusted-device token model and 30-day remember-device support
 - [x] Add trusted-device management API
+- [x] Add authenticated Personal Security Key rotation endpoint
+- [x] Revoke all trusted devices when the Security Key is rotated
 - [ ] Add forgotten Security Key recovery flow after verified email/domain is available
 - [ ] Centralize API error handling
 - [ ] Add authentication/payment rate limiting
@@ -87,6 +89,10 @@
 - [x] Add 6–10 character Security Key input validation
 - [x] Add Remember This Device option
 - [x] Add trusted-device management/revocation UI
+- [x] Surface trusted-device management from the main Settings page
+- [x] Add Personal Security Key rotation UI
+- [x] Show the newly generated Security Key once with copy support
+- [x] Explain trusted-device revocation when the Security Key changes
 - [ ] Add Security Key recovery UI after verified email/domain is available
 - [ ] Centralize API client
 - [x] Complete responsive membership card layout
