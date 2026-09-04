@@ -47,6 +47,13 @@
 - [x] Enforce a single recommended active membership plan in admin catalog updates
 - [x] Align OTP purpose enum with registration verification, login 2FA, and purchase flows
 - [x] Remove duplicate OTP TTL index declaration
+- [x] Add Personal Security Key generation and bcrypt hashing for normal members
+- [x] Remove OTP requirement from normal member registration/login
+- [x] Allow email or username login
+- [x] Bypass Personal Security Key for administrators/moderators
+- [x] Add trusted-device token model and 30-day remember-device support
+- [ ] Add trusted-device list/revocation UI
+- [ ] Add forgotten Security Key recovery flow after verified email/domain is available
 - [ ] Centralize API error handling
 - [ ] Add authentication/payment rate limiting
 - [ ] Add stale pending-payment cleanup
@@ -75,6 +82,12 @@
 - [x] Add recommended membership-plan badge and styling
 - [x] Add admin control for the recommended membership plan
 - [x] Refine payment-page typography, labels, hierarchy, and responsive text styling
+- [x] Add Personal Security Key setup screen after registration
+- [x] Add Personal Security Key login step for members
+- [x] Add 6–10 character Security Key input validation
+- [x] Add Remember This Device option
+- [ ] Add trusted-device management/revocation UI
+- [ ] Add Security Key recovery UI after verified email/domain is available
 - [ ] Centralize API client
 - [x] Complete responsive membership card layout
 - [x] Harden membership card responsive layout and prevent detail overlap
