@@ -97,9 +97,15 @@ export default function CommunityPage() {
     if (!file) return
     setError('')
     setImageProcessing(true)
-    try { setNewPost((current) => ({ ...current, image: await compressImage(file) })) }
-    catch (photoError) { setError(photoError.message); event.target.value = '' }
-    finally { setImageProcessing(false) }
+    try {
+      const compressedImage = await compressImage(file)
+      setNewPost((current) => ({ ...current, image: compressedImage }))
+    } catch (photoError) {
+      setError(photoError.message)
+      event.target.value = ''
+    } finally {
+      setImageProcessing(false)
+    }
   }
 
   const removePhoto = () => {
@@ -148,11 +154,10 @@ export default function CommunityPage() {
           <h2>{post.title}</h2><p>{post.content}</p>
           {post.image && <img className="post-image" src={post.image} alt={post.title || 'Community post'} loading="lazy" />}
           <div className="post-actions"><button className={`action-button${post.likedByMe ? ' action-active' : ''}`} type="button" disabled={!user} onClick={() => toggleLike(post._id)}>♥ {post.likeCount || 0}</button><button className="action-button" type="button" onClick={() => loadComments(post._id)}>Comments {post.commentCount || 0}</button></div>
-          {comments[post._id] && <div className="comments"><ul>{comments[post._id].map((comment) => <li key={comment._id}><strong>{getAuthorName(comment.author)}</strong>{comment.author?.username && <small className="muted"> @{comment.author.username}</small>}<span>{comment.content}</span></li>)}</ul>{user && <form className="comment-form" onSubmit={(event) => submitComment(event, post._id)}><input required maxLength="1000" placeholder="Write a comment…" value={commentText[post._id] || ''} onChange={(event) => setCommentText({ ...commentText, [post._id]: event.target.value })} /><button className="secondary-button">Send</button></form>}</div>}
+          {comments[post._id] && <div className="comments"><div className="comment-list">{comments[post._id].map((comment) => <div className="comment" key={comment._id}><strong>{getAuthorName(comment.author)}</strong><p>{comment.content}</p></div>)}</div>{user && <form className="comment-form" onSubmit={(event) => submitComment(event, post._id)}><input maxLength="1000" placeholder="Write a comment…" value={commentText[post._id] || ''} onChange={(event) => setCommentText((current) => ({ ...current, [post._id]: event.target.value }))} /><button className="secondary-button" type="submit">Comment</button></form>}</div>}
         </article>)}
+        {!posts.length && <p className="muted">No community posts yet. Be the first to share something.</p>}
       </section>
-      {posts.length === 0 && !error && <div className="empty-state"><h2>No posts yet</h2><p className="muted">Be the first to start a conversation.</p></div>}
-      <p className="muted back-link"><Link to="/">← Back to home</Link></p>
     </main>
   )
 }
