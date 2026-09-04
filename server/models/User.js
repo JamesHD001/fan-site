@@ -8,23 +8,27 @@ const userSchema = new mongoose.Schema({
   profileImage: { type: String, default: "" },
   role: { type: String, enum: ["USER", "ADMIN", "MODERATOR"], default: "USER" },
   isPaymentSupport: { type: Boolean, default: false, index: true },
-  isVerified: { type: Boolean, default: false },
+  isVerified: { type: Boolean, default: true },
   emailVerified: { type: Boolean, default: false },
   isActive: { type: Boolean, default: true },
   lastLogin: { type: Date, default: null },
-  
+
   // Phone verification
   phoneNumber: { type: String, default: null, trim: true },
   phoneNumberVerified: { type: Boolean, default: false },
   phoneVerificationToken: { type: String, default: null, select: false },
-  
-  // Two-Factor Authentication (2FA/TOTP)
+
+  // Two-Factor Authentication (2FA/TOTP) retained for future optional use.
   twoFactorEnabled: { type: Boolean, default: false, index: true },
-  twoFactorSecret: { type: String, default: null, select: false }, // Encrypted TOTP secret
-  backupCodes: { type: [String], default: [], select: false }, // Array of backup codes (hashed)
-  
-  // Security settings
-  requireOtpOnLogin: { type: Boolean, default: false }, // User preference for OTP on login
+  twoFactorSecret: { type: String, default: null, select: false },
+  backupCodes: { type: [String], default: [], select: false },
+
+  // Personal Security Key (PSK) for normal-member login.
+  securityKeyHash: { type: String, default: null, select: false },
+  securityKeyEnabled: { type: Boolean, default: false, index: true },
+
+  // Legacy setting retained for compatibility with existing security-settings UI/API.
+  requireOtpOnLogin: { type: Boolean, default: false },
   passwordChangedAt: { type: Date, default: null },
   loginAttempts: { type: Number, default: 0 },
   accountLockedUntil: { type: Date, default: null },
