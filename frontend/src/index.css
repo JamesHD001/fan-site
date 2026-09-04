@@ -38,32 +38,16 @@ p { margin: 0; }
 ::selection { color: #090909; background: var(--accent-light); }
 
 /* ===== Notification navigation alert ===== */
-.notification-nav-link {
-  color: #e74c3c !important;
-  font-weight: 700;
-}
-
-.notification-nav-link.active,
-.notification-nav-link:hover,
-.notification-nav-link:focus-visible {
-  color: #ff6b5b !important;
-}
-
 .notification-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 1.35rem;
-  height: 1.35rem;
-  margin-left: 0.4rem;
-  padding: 0 0.3rem;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 999px;
-  color: #fff;
-  background: #c0392b;
-  font-size: 0.68rem;
+  margin-left: 0.35rem;
+  color: #e74c3c;
+  font-size: 0.78em;
   font-weight: 800;
   line-height: 1;
+  white-space: nowrap;
 }
 
 @media (prefers-reduced-motion: reduce) {
