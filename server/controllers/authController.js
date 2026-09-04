@@ -4,229 +4,50 @@ const { hashPassword, comparePassword } = require("../utils/password");
 const { generateToken } = require("../utils/jwt");
 const { createOtp, verifyOtp } = require("../services/otpService");
 const { notifyWelcome } = require("../services/notificationService");
-const {
-  generateSecurityKey,
-  normalizeSecurityKey,
-  isValidSecurityKeyFormat,
-  hashSecurityKey,
-  compareSecurityKey,
-  generateTrustedDeviceToken,
-  hashTrustedDeviceToken
-} = require("../services/securityKeyService");
+const { generateSecurityKey, normalizeSecurityKey, isValidSecurityKeyFormat, hashSecurityKey, compareSecurityKey, generateTrustedDeviceToken, hashTrustedDeviceToken } = require("../services/securityKeyService");
 
 const MAX_PROFILE_IMAGE_BYTES = 140 * 1024;
 const PROFILE_IMAGE_PATTERN = /^data:image\/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=]+)$/i;
 const TRUSTED_DEVICE_COOKIE = "fan_community_trusted_device";
 const TRUSTED_DEVICE_DAYS = 30;
 
-const sanitizeUser = (user) => ({
-  id: user._id,
-  name: user.name,
-  username: user.username,
-  email: user.email,
-  profileImage: user.profileImage,
-  role: user.role,
-  isVerified: user.isVerified,
-  emailVerified: user.emailVerified,
-  isActive: user.isActive,
-  lastLogin: user.lastLogin,
-  phoneNumber: user.phoneNumber,
-  phoneNumberVerified: user.phoneNumberVerified,
-  twoFactorEnabled: user.twoFactorEnabled,
-  securityKeyEnabled: user.securityKeyEnabled,
-  requireOtpOnLogin: user.requireOtpOnLogin,
-  createdAt: user.createdAt
-});
-
-const validateRegistrationInput = (body) => {
-  const normalizedEmail = String(body?.email || "").trim().toLowerCase();
-  const normalizedUsername = String(body?.username || "").trim().toLowerCase();
-  const name = String(body?.name || "").trim();
-  const password = String(body?.password || "");
-  if (!name || name.length < 2 || name.length > 100) return null;
-  if (!/^[a-z0-9_]{3,30}$/.test(normalizedUsername)) return null;
-  if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) return null;
-  if (password.length < 8) return null;
-  return { normalizedEmail, normalizedUsername, name, password };
-};
-
-const parseCookie = (req, name) => {
-  const header = req.headers.cookie || "";
-  const match = header.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${name}=`));
-  return match ? decodeURIComponent(match.slice(name.length + 1)) : null;
-};
-
-const cookieOptions = () => ({
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-  maxAge: TRUSTED_DEVICE_DAYS * 24 * 60 * 60 * 1000,
-  path: "/api/auth"
-});
-
+const sanitizeUser = (user) => ({ id: user._id, name: user.name, username: user.username, email: user.email, profileImage: user.profileImage, role: user.role, isVerified: user.isVerified, emailVerified: user.emailVerified, isActive: user.isActive, lastLogin: user.lastLogin, phoneNumber: user.phoneNumber, phoneNumberVerified: user.phoneNumberVerified, twoFactorEnabled: user.twoFactorEnabled, securityKeyEnabled: user.securityKeyEnabled, requireOtpOnLogin: user.requireOtpOnLogin, createdAt: user.createdAt });
+const validateRegistrationInput = (body) => { const normalizedEmail = String(body?.email || "").trim().toLowerCase(); const normalizedUsername = String(body?.username || "").trim().toLowerCase(); const name = String(body?.name || "").trim(); const password = String(body?.password || ""); if (!name || name.length < 2 || name.length > 100) return null; if (!/^[a-z0-9_]{3,30}$/.test(normalizedUsername)) return null; if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) return null; if (password.length < 8) return null; return { normalizedEmail, normalizedUsername, name, password }; };
+const parseCookie = (req, name) => { const header = req.headers.cookie || ""; const match = header.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${name}=`)); return match ? decodeURIComponent(match.slice(name.length + 1)) : null; };
+const cookieOptions = () => ({ httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", maxAge: TRUSTED_DEVICE_DAYS * 24 * 60 * 60 * 1000, path: "/api/auth" });
 const setTrustedDeviceCookie = (res, token) => res.cookie(TRUSTED_DEVICE_COOKIE, token, cookieOptions());
 const clearTrustedDeviceCookie = (res) => res.clearCookie(TRUSTED_DEVICE_COOKIE, { ...cookieOptions(), maxAge: undefined });
+const createTrustedDevice = async (user, req, res) => { const rawToken = generateTrustedDeviceToken(); await TrustedDevice.create({ user: user._id, tokenHash: hashTrustedDeviceToken(rawToken), deviceName: String(req.body?.deviceName || "Trusted device").trim().slice(0, 100) || "Trusted device", expiresAt: new Date(Date.now() + TRUSTED_DEVICE_DAYS * 24 * 60 * 60 * 1000) }); setTrustedDeviceCookie(res, rawToken); };
+const isTrustedDevice = async (req, user) => { const rawToken = parseCookie(req, TRUSTED_DEVICE_COOKIE); if (!rawToken) return false; const device = await TrustedDevice.findOne({ user: user._id, tokenHash: hashTrustedDeviceToken(rawToken), expiresAt: { $gt: new Date() } }).select("+tokenHash"); if (!device) return false; device.lastUsedAt = new Date(); await device.save(); return true; };
 
-const createTrustedDevice = async (user, req, res) => {
-  const rawToken = generateTrustedDeviceToken();
-  await TrustedDevice.create({
-    user: user._id,
-    tokenHash: hashTrustedDeviceToken(rawToken),
-    deviceName: String(req.body?.deviceName || "Trusted device").trim().slice(0, 100) || "Trusted device",
-    expiresAt: new Date(Date.now() + TRUSTED_DEVICE_DAYS * 24 * 60 * 60 * 1000)
-  });
-  setTrustedDeviceCookie(res, rawToken);
-};
-
-const isTrustedDevice = async (req, user) => {
-  const rawToken = parseCookie(req, TRUSTED_DEVICE_COOKIE);
-  if (!rawToken) return false;
-  const device = await TrustedDevice.findOne({
-    user: user._id,
-    tokenHash: hashTrustedDeviceToken(rawToken),
-    expiresAt: { $gt: new Date() }
-  }).select("+tokenHash");
-  if (!device) return false;
-  device.lastUsedAt = new Date();
-  await device.save();
-  return true;
-};
-
-const register = async (req, res) => {
-  try {
-    const validated = validateRegistrationInput(req.body);
-    if (!validated) return res.status(400).json({ success: false, message: "Please provide valid registration details." });
-    const { normalizedEmail, normalizedUsername, name, password } = validated;
-    const existingUser = await User.findOne({ $or: [{ email: normalizedEmail }, { username: normalizedUsername }] });
-    if (existingUser) return res.status(409).json({ success: false, message: "Email or username is already registered." });
-
-    const securityKey = generateSecurityKey();
-    const user = await User.create({
-      name,
-      username: normalizedUsername,
-      email: normalizedEmail,
-      password: await hashPassword(password),
-      securityKeyHash: await hashSecurityKey(securityKey),
-      securityKeyEnabled: true,
-      isVerified: true,
-      emailVerified: false
-    });
-    await notifyWelcome(user._id, user.name);
-    return res.status(201).json({
-      success: true,
-      message: "Account created successfully. Save your Personal Security Key before continuing.",
-      securityKey,
-      token: generateToken(user),
-      user: sanitizeUser(user)
-    });
-  } catch (error) {
-    console.error("Registration error:", error);
-    return res.status(500).json({ success: false, message: "Unable to create your account." });
-  }
-};
-
-const verifyRegistration = async (req, res) => {
-  return res.status(410).json({ success: false, message: "Email OTP registration has been retired. Please register normally and save your Personal Security Key." });
-};
-
-const login = async (req, res) => {
-  try {
-    const { email, username, password, securityKey, rememberDevice = false } = req.body;
-    const identifier = String(email || username || "").trim().toLowerCase();
-    if (!identifier || !password) return res.status(400).json({ success: false, message: "Email/username and password are required." });
-
-    const user = await User.findOne({ $or: [{ email: identifier }, { username: identifier }] }).select("+password +loginAttempts +accountLockedUntil +securityKeyHash");
-    if (!user) return res.status(401).json({ success: false, message: "Invalid email/username or password." });
-    if (!user.isActive) return res.status(403).json({ success: false, message: "This account has been disabled." });
-    if (user.accountLockedUntil && user.accountLockedUntil.getTime() > Date.now()) return res.status(429).json({ success: false, message: "Account temporarily locked. Please try again later." });
-
-    if (!await comparePassword(password, user.password)) {
-      user.loginAttempts = (user.loginAttempts || 0) + 1;
-      if (user.loginAttempts >= 5) user.accountLockedUntil = new Date(Date.now() + 30 * 60 * 1000);
-      await user.save();
-      return res.status(401).json({ success: false, message: "Invalid email/username or password." });
-    }
-
-    user.loginAttempts = 0;
-
-    // Administrators do not use the member Personal Security Key.
-    const isAdmin = user.role === "ADMIN" || user.role === "MODERATOR";
-    let securityKeySetup = null;
-
-    if (!isAdmin) {
-      let trusted = false;
-      if (!securityKey) trusted = await isTrustedDevice(req, user);
-
-      if (!trusted) {
-        if (!user.securityKeyHash || !user.securityKeyEnabled) {
-          const newSecurityKey = generateSecurityKey();
-          user.securityKeyHash = await hashSecurityKey(newSecurityKey);
-          user.securityKeyEnabled = true;
-          securityKeySetup = newSecurityKey;
-        } else {
-          if (!isValidSecurityKeyFormat(securityKey)) return res.status(401).json({ success: false, requiresSecurityKey: true, message: "A valid Personal Security Key is required." });
-          const validKey = await compareSecurityKey(normalizeSecurityKey(securityKey), user.securityKeyHash);
-          if (!validKey) {
-            user.loginAttempts = (user.loginAttempts || 0) + 1;
-            if (user.loginAttempts >= 5) user.accountLockedUntil = new Date(Date.now() + 30 * 60 * 1000);
-            await user.save();
-            return res.status(401).json({ success: false, requiresSecurityKey: true, message: "Invalid Personal Security Key." });
-          }
-        }
-      }
-    }
-
-    user.lastLogin = new Date();
-    await user.save();
-    if (rememberDevice && !isAdmin && !securityKeySetup) await createTrustedDevice(user, req, res);
-
-    return res.json({
-      success: true,
-      message: securityKeySetup ? "Security Key setup required. Save the key shown before continuing." : "Login successful.",
-      requiresSecurityKey: Boolean(securityKeySetup),
-      securityKey: securityKeySetup,
-      token: generateToken(user),
-      user: sanitizeUser(user)
-    });
-  } catch (error) {
-    console.error("Login error:", error);
-    return res.status(500).json({ success: false, message: "Unable to login." });
-  }
-};
-
-const verifyLoginOtp = async (req, res) => {
-  return res.status(410).json({ success: false, message: "OTP login has been retired. Please use your Personal Security Key." });
-};
-
-const logout = async (req, res) => {
-  try {
-    const rawToken = parseCookie(req, TRUSTED_DEVICE_COOKIE);
-    if (rawToken) await TrustedDevice.deleteOne({ tokenHash: hashTrustedDeviceToken(rawToken) });
-    clearTrustedDeviceCookie(res);
-    return res.json({ success: true, message: "Logged out successfully." });
-  } catch (error) {
-    clearTrustedDeviceCookie(res);
-    return res.json({ success: true, message: "Logged out successfully." });
-  }
-};
-
+const register = async (req, res) => { try { const validated = validateRegistrationInput(req.body); if (!validated) return res.status(400).json({ success: false, message: "Please provide valid registration details." }); const { normalizedEmail, normalizedUsername, name, password } = validated; const existingUser = await User.findOne({ $or: [{ email: normalizedEmail }, { username: normalizedUsername }] }); if (existingUser) return res.status(409).json({ success: false, message: "Email or username is already registered." }); const securityKey = generateSecurityKey(); const user = await User.create({ name, username: normalizedUsername, email: normalizedEmail, password: await hashPassword(password), securityKeyHash: await hashSecurityKey(securityKey), securityKeyEnabled: true, isVerified: true, emailVerified: false }); await notifyWelcome(user._id, user.name); return res.status(201).json({ success: true, message: "Account created successfully. Save your Personal Security Key before continuing.", securityKey, token: generateToken(user), user: sanitizeUser(user) }); } catch (error) { console.error("Registration error:", error); return res.status(500).json({ success: false, message: "Unable to create your account." }); } };
+const verifyRegistration = async (req, res) => res.status(410).json({ success: false, message: "Email OTP registration has been retired. Please register normally and save your Personal Security Key." });
+const login = async (req, res) => { try { const { email, username, password, securityKey, rememberDevice = false } = req.body; const identifier = String(email || username || "").trim().toLowerCase(); if (!identifier || !password) return res.status(400).json({ success: false, message: "Email/username and password are required." }); const user = await User.findOne({ $or: [{ email: identifier }, { username: identifier }] }).select("+password +loginAttempts +accountLockedUntil +securityKeyHash"); if (!user) return res.status(401).json({ success: false, message: "Invalid email/username or password." }); if (!user.isActive) return res.status(403).json({ success: false, message: "This account has been disabled." }); if (user.accountLockedUntil && user.accountLockedUntil.getTime() > Date.now()) return res.status(429).json({ success: false, message: "Account temporarily locked. Please try again later." }); if (!await comparePassword(password, user.password)) { user.loginAttempts = (user.loginAttempts || 0) + 1; if (user.loginAttempts >= 5) user.accountLockedUntil = new Date(Date.now() + 30 * 60 * 1000); await user.save(); return res.status(401).json({ success: false, message: "Invalid email/username or password." }); } user.loginAttempts = 0; const isAdmin = user.role === "ADMIN" || user.role === "MODERATOR"; let securityKeySetup = null; if (!isAdmin) { let trusted = false; if (!securityKey) trusted = await isTrustedDevice(req, user); if (!trusted) { if (!user.securityKeyHash || !user.securityKeyEnabled) { const newSecurityKey = generateSecurityKey(); user.securityKeyHash = await hashSecurityKey(newSecurityKey); user.securityKeyEnabled = true; securityKeySetup = newSecurityKey; } else { if (!isValidSecurityKeyFormat(securityKey)) return res.status(401).json({ success: false, requiresSecurityKey: true, message: "A valid Personal Security Key is required." }); const validKey = await compareSecurityKey(normalizeSecurityKey(securityKey), user.securityKeyHash); if (!validKey) { user.loginAttempts = (user.loginAttempts || 0) + 1; if (user.loginAttempts >= 5) user.accountLockedUntil = new Date(Date.now() + 30 * 60 * 1000); await user.save(); return res.status(401).json({ success: false, requiresSecurityKey: true, message: "Invalid Personal Security Key." }); } } } } user.lastLogin = new Date(); await user.save(); if (rememberDevice && !isAdmin && !securityKeySetup) await createTrustedDevice(user, req, res); return res.json({ success: true, message: securityKeySetup ? "Security Key setup required. Save the key shown before continuing." : "Login successful.", requiresSecurityKey: Boolean(securityKeySetup), securityKey: securityKeySetup, token: generateToken(user), user: sanitizeUser(user) }); } catch (error) { console.error("Login error:", error); return res.status(500).json({ success: false, message: "Unable to login." }); } };
+const verifyLoginOtp = async (req, res) => res.status(410).json({ success: false, message: "OTP login has been retired. Please use your Personal Security Key." });
+const logout = async (req, res) => { try { const rawToken = parseCookie(req, TRUSTED_DEVICE_COOKIE); if (rawToken) await TrustedDevice.deleteOne({ tokenHash: hashTrustedDeviceToken(rawToken) }); clearTrustedDeviceCookie(res); return res.json({ success: true, message: "Logged out successfully." }); } catch (error) { clearTrustedDeviceCookie(res); return res.json({ success: true, message: "Logged out successfully." }); } };
 const getCurrentUser = async (req, res) => { try { return res.status(200).json({ success: true, user: sanitizeUser(req.user) }); } catch (error) { return res.status(500).json({ success: false, message: "Unable to retrieve user information." }); } };
 const updateCurrentUser = async (req, res) => { try { const { name, username, email } = req.body; const updates = { name: String(name || "").trim(), username: String(username || "").trim().toLowerCase(), email: String(email || "").trim().toLowerCase() }; if (updates.name.length < 2 || updates.name.length > 100) return res.status(400).json({ success: false, message: "Name must be between 2 and 100 characters." }); if (!/^[a-z0-9_]{3,30}$/.test(updates.username)) return res.status(400).json({ success: false, message: "Username can only contain letters, numbers, and underscores." }); if (!/^\S+@\S+\.\S+$/.test(updates.email)) return res.status(400).json({ success: false, message: "Please provide a valid email address." }); const duplicate = await User.findOne({ $or: [{ email: updates.email }, { username: updates.username }], _id: { $ne: req.user._id } }); if (duplicate) return res.status(409).json({ success: false, message: "Email or username is already in use." }); req.user.name = updates.name; req.user.username = updates.username; req.user.email = updates.email; await req.user.save(); return res.json({ success: true, message: "Profile updated successfully.", user: sanitizeUser(req.user) }); } catch (error) { return res.status(500).json({ success: false, message: "Unable to update your profile." }); } };
 
 const updateProfileImage = async (req, res) => {
-  try { const profileImage = String(req.body?.profileImage || "").trim(); const match = profileImage.match(PROFILE_IMAGE_PATTERN); if (!match) return res.status(400).json({ success: false, message: "Please upload a valid JPEG, PNG or WebP image." }); const imageBytes = Math.floor((match[2].length * 3) / 4) - (match[2].endsWith("==") ? 2 : match[2].endsWith("=") ? 1 : 0); if (imageBytes <= 0 || imageBytes > MAX_PROFILE_IMAGE_BYTES) return res.status(413).json({ success: false, message: "Profile photo must be 140 KB or smaller after resizing." }); req.user.profileImage = profileImage; await req.user.save(); return res.json({ success: true, message: "Profile photo updated successfully.", user: sanitizeUser(req.user) }); } catch (error) { console.error("Profile image update error:", error); return res.status(500).json({ success: false, message: "Unable to update your profile photo." }); }
+  try {
+    const profileImage = String(req.body?.profileImage || "").trim();
+    // An empty value intentionally removes the current profile photo.
+    if (!profileImage) {
+      req.user.profileImage = "";
+      await req.user.save();
+      return res.json({ success: true, message: "Profile photo removed successfully.", user: sanitizeUser(req.user) });
+    }
+    const match = profileImage.match(PROFILE_IMAGE_PATTERN);
+    if (!match) return res.status(400).json({ success: false, message: "Please upload a valid JPEG, PNG or WebP image." });
+    const imageBytes = Math.floor((match[2].length * 3) / 4) - (match[2].endsWith("==") ? 2 : match[2].endsWith("=") ? 1 : 0);
+    if (imageBytes <= 0 || imageBytes > MAX_PROFILE_IMAGE_BYTES) return res.status(413).json({ success: false, message: "Profile photo must be 140 KB or smaller after resizing." });
+    req.user.profileImage = profileImage;
+    await req.user.save();
+    return res.json({ success: true, message: "Profile photo updated successfully.", user: sanitizeUser(req.user) });
+  } catch (error) { console.error("Profile image update error:", error); return res.status(500).json({ success: false, message: "Unable to update your profile photo." }); }
 };
 
-const updateSecuritySettings = async (req, res) => {
-  try { const { requireOtpOnLogin } = req.body; if (typeof requireOtpOnLogin === "boolean") req.user.requireOtpOnLogin = requireOtpOnLogin; await req.user.save(); return res.json({ success: true, message: "Security settings updated successfully.", user: sanitizeUser(req.user) }); } catch (error) { console.error("Security settings update error:", error); return res.status(500).json({ success: false, message: "Unable to update security settings." }); }
-};
-
-const updatePhoneNumber = async (req, res) => {
-  try { const { phoneNumber } = req.body; if (!phoneNumber) return res.status(400).json({ success: false, message: "Phone number is required." }); const normalizedPhone = String(phoneNumber).trim().replace(/\D/g, ""); if (normalizedPhone.length < 10) return res.status(400).json({ success: false, message: "Please provide a valid phone number." }); req.user.phoneNumber = normalizedPhone; req.user.phoneNumberVerified = false; await createOtp({ email: req.user.email, purpose: "PHONE_VERIFICATION" }); await req.user.save(); return res.json({ success: true, message: "A verification code has been sent to complete phone number update.", phoneNumber: normalizedPhone }); } catch (error) { console.error("Phone number update error:", error); return res.status(500).json({ success: false, message: "Unable to update phone number." }); }
-};
-
-const verifyPhoneNumber = async (req, res) => {
-  try { const { otp } = req.body; if (!otp) return res.status(400).json({ success: false, message: "Verification code is required." }); const result = await verifyOtp({ email: req.user.email, purpose: "PHONE_VERIFICATION", otp }); if (!result.valid) return res.status(400).json({ success: false, message: result.message }); req.user.phoneNumberVerified = true; await req.user.save(); return res.json({ success: true, message: "Phone number verified successfully.", user: sanitizeUser(req.user) }); } catch (error) { console.error("Phone verification error:", error); return res.status(500).json({ success: false, message: "Unable to verify phone number." }); }
-};
-
+const updateSecuritySettings = async (req, res) => { try { const allowed = ["requireOtpOnLogin", "twoFactorEnabled"]; for (const key of allowed) if (typeof req.body?.[key] === "boolean") req.user[key] = req.body[key]; await req.user.save(); return res.json({ success: true, message: "Security settings updated.", user: sanitizeUser(req.user) }); } catch (error) { return res.status(500).json({ success: false, message: "Unable to update security settings." }); } };
+const updatePhoneNumber = async (req, res) => { try { const phoneNumber = String(req.body?.phoneNumber || "").trim(); if (phoneNumber.length < 7 || phoneNumber.length > 25) return res.status(400).json({ success: false, message: "Please provide a valid phone number." }); req.user.phoneNumber = phoneNumber; req.user.phoneNumberVerified = false; await req.user.save(); const otp = await createOtp(req.user._id, "PHONE_VERIFICATION"); return res.json({ success: true, message: "Phone number saved. Verification code generated.", otpId: otp._id }); } catch (error) { return res.status(500).json({ success: false, message: "Unable to update phone number." }); } };
+const verifyPhoneNumber = async (req, res) => { try { const result = await verifyOtp(req.user._id, req.body?.code, "PHONE_VERIFICATION"); if (!result.valid) return res.status(400).json({ success: false, message: result.message }); req.user.phoneNumberVerified = true; await req.user.save(); return res.json({ success: true, message: "Phone number verified.", user: sanitizeUser(req.user) }); } catch (error) { return res.status(500).json({ success: false, message: "Unable to verify phone number." }); } };
 module.exports = { register, verifyRegistration, login, verifyLoginOtp, logout, getCurrentUser, updateCurrentUser, updateProfileImage, updateSecuritySettings, updatePhoneNumber, verifyPhoneNumber };
