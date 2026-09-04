@@ -59,7 +59,7 @@ export default function SiteHeader() {
         <nav id="site-navigation" className={`site-navigation${menuOpen ? ' navigation-open' : ''}`}>
           {user && <NavLink to="/dashboard" onClick={closeMenu}>Dashboard</NavLink>}
           {links.map((link) => (!link.auth || user) && <NavLink key={link.to} to={link.to} onClick={closeMenu}>{link.label}</NavLink>)}
-          {user && <NavLink className="notification-nav-link" to="/notifications" onClick={closeMenu}>[Notifications]{unreadCount > 0 && <span className="notification-badge" aria-label={`${unreadCount} unread notifications`}>{unreadCount > 99 ? '99+' : unreadCount}</span>}</NavLink>}
+          {user && <NavLink to="/notifications" onClick={closeMenu}>Notifications{unreadCount > 0 && <span className="notification-badge" aria-label={`${unreadCount} unread notifications`}>[{unreadCount > 99 ? '99+' : unreadCount}]</span>}</NavLink>}
           {user?.role === 'ADMIN' && <NavLink to="/admin" onClick={closeMenu}>Admin</NavLink>}
           {user ? <NavLink to="/settings" onClick={closeMenu}>Settings</NavLink> : <NavLink className="header-cta" to="/register" onClick={closeMenu}>Join</NavLink>}
         </nav>
