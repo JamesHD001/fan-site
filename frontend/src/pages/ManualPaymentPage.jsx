@@ -266,7 +266,7 @@ export default function ManualPaymentPage() {
                       aria-pressed={method === 'CRYPTO'}
                       aria-label="Pay with cryptocurrency"
                     >
-                      🪙 Crypto
+                      Pay with Crypto
                     </button>
                   )}
                   {hasGiftCards && (
@@ -277,7 +277,7 @@ export default function ManualPaymentPage() {
                       aria-pressed={method === 'GIFTCARD'}
                       aria-label="Pay with gift cards"
                     >
-                      🎁 Gift Cards
+                      Pay with Gift Cards
                     </button>
                   )}
                 </fieldset>
