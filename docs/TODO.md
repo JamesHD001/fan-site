@@ -68,6 +68,9 @@
 - [x] Fix admin user deletion and associated-data cleanup
 - [x] Allow deletion of other administrator/test accounts while protecting the current admin
 - [x] Return populated author data when creating posts
+- [x] Add signed Cloudinary service for community post photos
+- [x] Store uploaded post photo URLs instead of image data in MongoDB
+- [ ] Add server-side image moderation and stricter upload policy
 
 ## Frontend
 - [x] Manual payment status page
@@ -129,6 +132,10 @@
 - [x] Display post username alongside author name
 - [x] Send authenticated requests when loading the community feed
 - [x] Make the Notifications navigation item bracketed and red for visibility
+- [x] Add Add Photo control to the community post composer
+- [x] Add client-side photo compression before upload
+- [x] Add selected-photo preview with remove/replace controls
+- [x] Display uploaded photos in community posts
 - [ ] Accessibility review
 
 ## Product features
@@ -140,6 +147,8 @@
 - [x] Notification center
 - [x] Admin dashboard expansion
 - [ ] Community moderation/reporting
+- [ ] Multiple-photo post support
+- [ ] Post image editing/cropping UI
 
 ## Repository hygiene
 - [x] Remove unused Vite/React starter assets
