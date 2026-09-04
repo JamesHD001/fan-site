@@ -56,9 +56,13 @@
 - [x] Add trusted-device management API
 - [x] Add authenticated Personal Security Key rotation endpoint
 - [x] Revoke all trusted devices when the Security Key is rotated
+- [x] Add authenticated password-change endpoint
+- [x] Require current password plus Personal Security Key for normal-member password changes
+- [x] Add Personal Security Key password-reset/recovery endpoint
+- [x] Revoke all trusted devices after password change/reset
+- [x] Invalidate JWT sessions issued before a password change
 - [ ] Add forgotten Security Key recovery flow after verified email/domain is available
 - [ ] Centralize API error handling
-- [ ] Add authentication/payment rate limiting
 - [ ] Add stale pending-payment cleanup
 - [ ] Add administrative audit log
 - [x] Fix admin user deletion and associated-data cleanup
@@ -98,6 +102,10 @@
 - [x] Add profile photo replacement/edit controls
 - [x] Add profile photo removal control
 - [x] Add responsive profile photo viewer styling
+- [x] Add password change page under account Settings
+- [x] Add password reset/recovery page
+- [x] Add password reset entry point to the sign-in page
+- [x] Explain Security Key-based recovery and remembered-device revocation
 - [ ] Add Security Key recovery UI after verified email/domain is available
 - [ ] Centralize API client
 - [x] Complete responsive membership card layout
