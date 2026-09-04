@@ -91,6 +91,7 @@ export default function AuthPage({ mode = 'login' }) {
       {!isLogin && <><label>Full name<input name="name" value={form.name} onChange={handleChange} required autoComplete="name" /></label><label>Username<input name="username" value={form.username} onChange={handleChange} required autoComplete="username" /></label></>}
       <label>Email or username<input name="email" value={form.email} onChange={handleChange} required autoComplete="username" /></label><label>Password<input type="password" name="password" value={form.password} onChange={handleChange} required minLength={8} autoComplete={isLogin ? 'current-password' : 'new-password'} /></label>
       <button className="primary-button auth-submit" type="submit" disabled={submitting}>{submitting ? 'Please wait…' : isLogin ? 'Continue' : 'Create Account'}</button>
+      {isLogin && <button type="button" className="auth-resend" onClick={() => navigate('/reset-password')}>Forgot your password?</button>}
     </form>}
     <p className="auth-switch">{isLogin ? "Don't have an account?" : 'Already have an account?'} <button type="button" onClick={() => navigate(isLogin ? '/register' : '/login', { state: { from: redirectTo } })}>{isLogin ? 'Create one' : 'Sign in'}</button></p>
   </section></main>
