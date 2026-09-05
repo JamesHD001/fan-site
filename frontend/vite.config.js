@@ -1,9 +1,9 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
-// GitHub Pages serves this project from /fan-site/.
-// Set VITE_BASE_PATH=/ for a future custom-domain deployment.
+// Use the root path by default for modern hosts such as Vercel.
+// GitHub Pages overrides this with VITE_BASE_PATH=/fan-site/ in CI.
 export default defineConfig({
-  base: process.env.VITE_BASE_PATH || '/fan-site/',
+  base: process.env.VITE_BASE_PATH || '/',
   plugins: [react()],
 })
