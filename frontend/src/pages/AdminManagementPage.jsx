@@ -171,7 +171,7 @@ export default function AdminManagementPage() {
               <td className="admin-actions">
                 <button onClick={() => openPaymentPreview(row)}>View details</button>
                 {hasProof && <button onClick={() => openPaymentPreview(row)}>View receipt</button>}
-                {row.status === 'PROOF_SUBMITTED' && <><button disabled={busyId === row._id || !isSupport} onClick={() => openPaymentPreview(row)}>{isSupport ? 'Review & verify' : 'Awaiting support admin'}</button><button className="secondary-button" disabled={busyId === row._id || !isSupport} onClick={() => { openPaymentPreview(row).then(() => paymentAction('confirm')); }}>Confirm payment</button><button className="danger" disabled={busyId === row._id || !isSupport} onClick={() => openPaymentPreview(row)}>Reject</button></>}
+                {row.status === 'PROOF_SUBMITTED' && <><button disabled={busyId === row._id || !isSupport} onClick={() => openPaymentPreview(row)}>{isSupport ? 'Review & verify' : 'Awaiting support admin'}</button><button className="secondary-button" disabled={busyId === row._id || !isSupport} onClick={() => openPaymentPreview(row)}>Confirm payment</button><button className="danger" disabled={busyId === row._id || !isSupport} onClick={() => openPaymentPreview(row)}>Reject</button></>}
                 {row.status === 'PENDING_PAYMENT' && <span className="muted">Awaiting member payment</span>}
                 {row.status === 'REJECTED' && <span className="muted">Awaiting replacement proof</span>}
                 {row.status === 'SUCCESS' && <span className="admin-status good">PAYMENT COMPLETE</span>}
