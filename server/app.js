@@ -23,7 +23,33 @@ const app = express();
 if (process.env.NODE_ENV === "production") app.set("trust proxy", 1);
 
 app.use(helmet());
-app.use(cors({ origin: process.env.CLIENT_URL || "http://localhost:5173", credentials: true }));
+
+// CLIENT_URL may contain one or more comma-separated origins. Keep the
+// deployed GitHub Pages origin supported while the project also uses Vercel.
+const configuredOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim().replace(/\/$/, ""))
+  .filter(Boolean);
+
+const allowedOrigins = new Set([
+  ...configuredOrigins,
+  "https://jameshd001.github.io",
+  "https://jameshd001.github.io/fan-site",
+  "https://fan-site-nine.vercel.app"
+]);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Requests without an Origin header (health checks, server-to-server
+    // calls, etc.) are allowed. Browser requests must match the allowlist.
+    if (!origin || allowedOrigins.has(origin.replace(/\/$/, ""))) {
+      return callback(null, true);
+    }
+    return callback(new Error("Origin is not allowed by CORS."));
+  },
+  credentials: true
+}));
+
 app.use("/api/payments/mine", express.json({ limit: "7mb" }), express.urlencoded({ extended: true, limit: "7mb" }));
 app.use("/api/payment-config", express.json({ limit: "7mb" }), express.urlencoded({ extended: true, limit: "7mb" }));
 app.use("/api/posts", express.json({ limit: "7mb" }), express.urlencoded({ extended: true, limit: "7mb" }));
