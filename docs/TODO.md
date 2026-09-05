@@ -158,10 +158,23 @@
 - [x] Preserve active application assets and configuration files
 - [ ] Re-run full frontend/backend tests after cleanup
 
+## Deployment & CI/CD
+- [x] Configure Vite base path for GitHub Pages project hosting
+- [x] Add GitHub Actions workflow to build and deploy frontend to GitHub Pages
+- [x] Add SPA 404 fallback to GitHub Pages deployment artifact
+- [ ] Enable GitHub Pages with GitHub Actions as the repository Pages source
+- [ ] Verify first GitHub Pages deployment
+- [ ] Add production frontend API URL as a GitHub Actions variable/secret when backend is deployed
+- [ ] Deploy Express backend separately
+- [ ] Connect frontend to production backend
+- [ ] Configure MongoDB Atlas production connection
+- [ ] Configure production payment environment
+
 ## Quality & delivery
 - [ ] Payment unit/integration test suite
 - [ ] Full API integration test coverage
-- [ ] GitHub Actions CI
+- [x] GitHub Actions frontend deployment workflow
+- [ ] GitHub Actions CI checks
 - [ ] Expand README and API documentation
 - [ ] Architecture diagram
 - [ ] Terms of Use
